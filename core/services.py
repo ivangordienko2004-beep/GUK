@@ -41,6 +41,26 @@ REQUIRED_COLUMNS = [
 ]
 
 
+OUTPUT_COLUMNS = [
+    ('', 'ОКРУГ ВУЗа', '1', 'okrug_vuza'),
+    ('', 'ОВУ, отв. за подготовку', '2', 'ovu_otv_podgotovku'),
+    ('', 'Наименование ВУЗа', '3', 'nazvanie_vuza'),
+    ('ВУС', '№', '4', 'vus_no'),
+    ('ВУС', 'Наименование', '5', 'vus_naimenovanie'),
+    ('Должность', '№', '6', 'doljnost_no'),
+    ('Должность', 'Наименование', '7', 'doljnost_naimenovanie'),
+    ('', 'Сбор/стаж', '8', 'sbor_stazhirovka'),
+    ('', 'Программа', '9', 'programma_podgotovki'),
+    ('', 'Место проведения', '10', 'mesto_provedeniya_uchebnogo_sbora'),
+    ('Планируется', 'преподавателей', '11', 'planiruetsya_prepodavatelej'),
+    ('Планируется', 'студентов', '12', 'planiruetsya_studentov'),
+    ('Сроки проведения', 'начало', '13', 'srok_provedeniya_nachalo'),
+    ('Сроки проведения', 'окончание', '14', 'srok_provedeniya_okonchanie'),
+    ('', 'ФИО ответственного', '15', 'fio_otvetstvennogo'),
+    ('', 'Мобильный', '16', 'mobilnyy'),
+]
+
+
 HEADER_ALIASES = {
     'округ вуза': 'okrug_vuza',
     'ову, отв. за подготовку': 'ovu_otv_podgotovku',
@@ -75,8 +95,12 @@ def _normalize(value: str) -> str:
 
 def _harmonize_columns(df: pd.DataFrame) -> pd.DataFrame:
     renamed = {}
+    direct_map = {_normalize(column): column for column in REQUIRED_COLUMNS}
     for col in df.columns:
         normalized = _normalize(col)
+        if normalized in direct_map:
+            renamed[col] = direct_map[normalized]
+            continue
         for alias, target in HEADER_ALIASES.items():
             if alias in normalized:
                 renamed[col] = target
@@ -88,11 +112,86 @@ def _harmonize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return out[REQUIRED_COLUMNS]
 
 
+def _detect_header_depth(raw_df: pd.DataFrame) -> int:
+    for idx in range(min(6, len(raw_df))):
+        row = raw_df.iloc[idx].astype(str).str.strip()
+        numeric_values = [value for value in row if value.isdigit()]
+        if len(numeric_values) >= 5 and '1' in numeric_values:
+            return idx + 1
+    return 1
+
+
+def _load_tabular_data(file) -> pd.DataFrame:
+    if hasattr(file, 'seek'):
+        file.seek(0)
+    raw_df = pd.read_excel(file, header=None, dtype=str).fillna('')
+    header_depth = _detect_header_depth(raw_df)
+
+    if header_depth <= 1:
+        if hasattr(file, 'seek'):
+            file.seek(0)
+        single_header_df = pd.read_excel(file, dtype=str).fillna('')
+        return _harmonize_columns(single_header_df)
+
+    header_rows = raw_df.iloc[:header_depth]
+    filled_headers = []
+    for idx, row in header_rows.iterrows():
+        row_values = row.astype(str).str.strip()
+        if idx < header_depth - 1:
+            row_values = row_values.replace('', pd.NA).ffill().fillna('')
+        filled_headers.append(row_values)
+
+    combined_headers = []
+    for col_idx in range(raw_df.shape[1]):
+        pieces = []
+        for row_idx in range(header_depth - 1):
+            value = str(filled_headers[row_idx].iloc[col_idx]).strip()
+            if value and value not in pieces:
+                pieces.append(value)
+        combined_headers.append(' '.join(pieces).strip())
+
+    body_df = raw_df.iloc[header_depth:].copy().reset_index(drop=True)
+    body_df.columns = combined_headers
+    return _harmonize_columns(body_df)
+
+
+def _export_merged_table(df: pd.DataFrame, path: Path) -> None:
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Объединение'
+
+    for col_idx, (group, title, number, column_name) in enumerate(OUTPUT_COLUMNS, start=1):
+        ws.cell(row=1, column=col_idx, value=group)
+        ws.cell(row=2, column=col_idx, value=title)
+        ws.cell(row=3, column=col_idx, value=number)
+        ws.column_dimensions[ws.cell(row=2, column=col_idx).column_letter].width = 22
+
+    group_start = None
+    current_group = None
+    for col_idx, (group, _, _, _) in enumerate(OUTPUT_COLUMNS, start=1):
+        if group != current_group:
+            if current_group and group_start and col_idx - 1 > group_start:
+                ws.merge_cells(start_row=1, start_column=group_start, end_row=1, end_column=col_idx - 1)
+            current_group = group
+            group_start = col_idx
+    if current_group and group_start and len(OUTPUT_COLUMNS) > group_start:
+        ws.merge_cells(start_row=1, start_column=group_start, end_row=1, end_column=len(OUTPUT_COLUMNS))
+
+    for row_idx, (_, row) in enumerate(df.iterrows(), start=4):
+        for col_idx, (_, _, _, column_name) in enumerate(OUTPUT_COLUMNS, start=1):
+            ws.cell(row=row_idx, column=col_idx, value=row[column_name])
+
+    wb.save(path)
+
+
+def _read_harmonized_dataframe(path_or_file) -> pd.DataFrame:
+    return _load_tabular_data(path_or_file)
+
+
 def merge_excel_files(files) -> Path:
     frames = []
     for file in files:
-        sheet_df = pd.read_excel(file, dtype=str).fillna('')
-        frames.append(_harmonize_columns(sheet_df))
+        frames.append(_read_harmonized_dataframe(file))
 
     merged = pd.concat(frames, ignore_index=True).fillna('')
     merged['planiruetsya_studentov'] = pd.to_numeric(merged['planiruetsya_studentov'], errors='coerce').fillna(0).astype(int)
@@ -101,12 +200,12 @@ def merge_excel_files(files) -> Path:
     output_dir = Path(settings.MEDIA_ROOT) / 'exports'
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / f'merged_{uuid.uuid4().hex}.xlsx'
-    merged.to_excel(path, index=False)
+    _export_merged_table(merged, path)
     return path
 
 
 def decode_for_admin(path: Path) -> Path:
-    df = pd.read_excel(path, dtype=str).fillna('')
+    df = _read_harmonized_dataframe(path)
     df['vus_naimenovanie'] = df.apply(
         lambda row: VUS_DECODING.get(str(row['vus_no']).strip(), row['vus_naimenovanie']),
         axis=1,
@@ -121,12 +220,12 @@ def decode_for_admin(path: Path) -> Path:
     )
 
     decoded_path = path.with_name(f'{path.stem}_decoded.xlsx')
-    df.to_excel(decoded_path, index=False)
+    _export_merged_table(df, decoded_path)
     return decoded_path
 
 
 def create_report(path: Path) -> Path:
-    df = pd.read_excel(path).fillna('')
+    df = _read_harmonized_dataframe(path)
     for col in ['planiruetsya_studentov', 'planiruetsya_prepodavatelej']:
         df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
 
