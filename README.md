@@ -22,8 +22,17 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py createsuperuser
 python manage.py runserver
 ```
 
 После входа обычный пользователь также может работать через `/login/`.
+
+
+## Стандартные учётные записи (первый запуск)
+
+После `python manage.py migrate` и открытия `/login/` приложение автоматически создаёт пользователей:
+
+- **admin / admin** — администратор (`is_staff=True`, `is_superuser=True`).
+- **guest / guest** — обычный пользователь.
+
+Если админ входит с дефолтным паролем `admin`, система сразу перенаправляет на страницу смены пароля.
