@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Панель | ГУК</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <div class="header-row">
+        <h1>Объединение файлов ВУЦ</h1>
+        <a href="{% url 'logout' %}" class="btn danger">Выйти</a>
+      </div>
+      <p class="subtitle">Милитари-режим: загрузка Excel, объединение, расшифровка и отчёт.</p>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form action="{% url 'upload_files' %}" method="post" enctype="multipart/form-data" class="stack">
+        {% csrf_token %}
+        {{ form.files }}
+        <button type="submit" class="btn">Загрузить и объединить</button>
+      </form>
+
+      {% if merged_file %}
+        <div class="actions">
+          <a href="{% url 'download_merged' %}" class="btn">Скачать объединённый Excel</a>
+          {% if request.user.is_staff %}
+            <a href="{% url 'decode_vus' %}" class="btn">Расшифровка (админ)</a>
+          {% endif %}
+          <a href="{% url 'create_report' %}" class="btn">Создать отчёт</a>
+        </div>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>
