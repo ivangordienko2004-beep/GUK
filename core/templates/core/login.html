@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход | ГУК</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'core/style.css' %}">
+</head>
+<body>
+  <main class="container card">
+    <h1>Система планирования сборов</h1>
+    <p class="subtitle">Войдите под пользователем или администратором</p>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn">Войти</button>
+    </form>
+  </main>
+</body>
+</html>
