@@ -11,7 +11,6 @@
   <main class="container card">
     <h1>Система планирования сборов</h1>
     <p class="subtitle">Войдите под пользователем или администратором</p>
-    <p class="subtitle">По умолчанию: админ <strong>admin/admin</strong>, пользователь <strong>guest/guest</strong>.</p>
     <form method="post" class="stack">
       {% csrf_token %}
       {{ form.as_p }}
