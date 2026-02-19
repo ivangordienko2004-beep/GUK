@@ -4,24 +4,14 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView
 from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
 
-from .auth_utils import ensure_default_users
 from .forms import ExcelUploadForm
-from .services import create_report as create_report_file, decode_for_admin, merge_excel_files
+from .services import create_report, decode_for_admin, merge_excel_files
 
 
 SESSION_KEY = 'merged_file_path'
-
-
-class GukLoginView(LoginView):
-    template_name = 'core/login.html'
-
-    def dispatch(self, request, *args, **kwargs):
-        ensure_default_users()
-        return super().dispatch(request, *args, **kwargs)
 
 
 def _session_path(request) -> Path | None:
@@ -86,5 +76,5 @@ def create_report(request):
     if not path:
         raise Http404('Сначала загрузите и объедините файлы.')
 
-    report = create_report_file(path)
+    report = create_report(path)
     return FileResponse(report.open('rb'), as_attachment=True, filename=report.name)
