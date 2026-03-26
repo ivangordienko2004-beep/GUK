@@ -5,7 +5,7 @@ import uuid
 
 import pandas as pd
 from django.conf import settings
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 VUS_DECODING = {
@@ -189,20 +189,44 @@ def _read_harmonized_dataframe(path_or_file) -> pd.DataFrame:
 
 
 def merge_excel_files(files) -> Path:
-    frames = []
-    for file in files:
-        frames.append(_read_harmonized_dataframe(file))
+    files = list(files)
+    if not files:
+        raise ValueError('Не переданы файлы для объединения.')
 
-    merged = pd.concat(frames, ignore_index=True).fillna('')
-    merged['planiruetsya_studentov'] = pd.to_numeric(merged['planiruetsya_studentov'], errors='coerce').fillna(0).astype(int)
-    merged['planiruetsya_prepodavatelej'] = pd.to_numeric(merged['planiruetsya_prepodavatelej'], errors='coerce').fillna(0).astype(int)
+    def _open_workbook(file_obj):
+        if hasattr(file_obj, 'seek'):
+            file_obj.seek(0)
+        return load_workbook(file_obj, data_only=True)
+
+    # Берём первый файл как шаблон: сохраняются заголовок, форматирование,
+    # объединённые ячейки и ширины столбцов.
+    merged_wb = _open_workbook(files[0])
+    merged_ws = merged_wb.active
+
+    # Оставляем только первые 3 строки заголовка
+    if merged_ws.max_row > 3:
+        merged_ws.delete_rows(4, merged_ws.max_row - 3)
+
+    next_row = 4
+    for file_obj in files:
+        wb = _open_workbook(file_obj)
+        ws = wb.active
+
+        # Данные начинаются с 4-й строки
+        for row in ws.iter_rows(min_row=4, max_row=ws.max_row, values_only=True):
+            if all(value in (None, '') for value in row):
+                continue
+
+            for col_idx, value in enumerate(row, start=1):
+                merged_ws.cell(row=next_row, column=col_idx, value=value)
+
+            next_row += 1
 
     output_dir = Path(settings.MEDIA_ROOT) / 'exports'
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / f'merged_{uuid.uuid4().hex}.xlsx'
-    _export_merged_table(merged, path)
+    merged_wb.save(path)
     return path
-
 
 def decode_for_admin(path: Path) -> Path:
     df = _read_harmonized_dataframe(path)
