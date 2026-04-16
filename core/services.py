@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from functools import lru_cache
 from pathlib import Path
 import uuid
 
@@ -8,17 +10,10 @@ from django.conf import settings
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
-VUS_DECODING = {
-    '021500': 'Командир мотострелкового подразделения',
-    '101000': 'Специалист связи',
-    '201200': 'Инженер вооружения',
-}
-
-POSITION_DECODING = {
-    '001': 'Командир отделения',
-    '002': 'Заместитель командира взвода',
-    '003': 'Старшина роты',
-}
+MAPPING_DIR = Path(settings.BASE_DIR) / 'Mapping'
+OFFICER_VUS_PATH = MAPPING_DIR / 'officer_vus.json'
+NONOFFICE_VUS_PATH = MAPPING_DIR / 'nonoffice_vus.json'
+NONOFFICE_POSITION_PATH = MAPPING_DIR / 'nonoffice_position.json'
 
 
 REQUIRED_COLUMNS = [
@@ -67,11 +62,10 @@ HEADER_ALIASES = {
     'наименование вуза': 'nazvanie_vuza',
     'вуз': 'nazvanie_vuza',
     'код вус': 'vus_no',
-    '№ вус': 'vus_no',
-    'наименование вус': 'vus_naimenovanie',
-    '№ должности': 'doljnost_no',
-    'номер должности': 'doljnost_no',
-    'наименование должности': 'doljnost_naimenovanie',
+    'вус №': 'vus_no',
+    'вус наименование': 'vus_naimenovanie',
+    'должность №': 'doljnost_no',
+    'должность наименование': 'doljnost_naimenovanie',
     'сбор/стаж': 'sbor_stazhirovka',
     'сбор/стажировка': 'sbor_stazhirovka',
     'программа': 'programma_podgotovki',
@@ -90,25 +84,109 @@ HEADER_ALIASES = {
 
 
 def _normalize(value: str) -> str:
-    return ''.join(ch for ch in str(value).lower() if ch.isalnum() or ch == ' ')
+    return ''.join(ch for ch in str(value).lower() if ch.isalnum() or ch )
+
+
+def _normalize_code(value) -> str:
+    if value is None:
+        return ''
+
+    text = str(value).strip()
+    if not text:
+        return ''
+
+    if text.endswith('.0') and text[:-2].isdigit():
+        text = text[:-2]
+
+    return text
+
+
+def _code_candidates(value, width: int) -> list[str]:
+    text = _normalize_code(value)
+    if not text:
+        return []
+
+    candidates = [text]
+    if text.isdigit():
+        padded = text.zfill(width)
+        if padded not in candidates:
+            candidates.insert(0, padded)
+    return candidates
+
+
+@lru_cache(maxsize=1)
+def _load_json_mapping(path: str) -> dict[str, str]:
+    file_path = Path(path)
+    if not file_path.exists():
+        return {}
+
+    try:
+        with file_path.open('r', encoding='utf-8') as file_obj:
+            raw_mapping = json.load(file_obj)
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+    if not isinstance(raw_mapping, dict):
+        return {}
+
+    normalized: dict[str, str] = {}
+    for key, value in raw_mapping.items():
+        normalized_key = _normalize_code(key)
+        if normalized_key:
+            normalized[normalized_key] = str(value)
+    return normalized
+
+
+def _load_decoding_maps() -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    return (
+        _load_json_mapping(str(OFFICER_VUS_PATH)),
+        _load_json_mapping(str(NONOFFICE_VUS_PATH)),
+        _load_json_mapping(str(NONOFFICE_POSITION_PATH)),
+    )
+
+
+def _lookup_decoding(value, mapping: dict[str, str], width: int) -> str | None:
+    print("Looking up value: ", value)
+    for candidate in _code_candidates(value, width):
+        print(candidate, mapping)
+        if candidate in mapping:
+            print(f"Found match for {value}: {mapping[candidate]}")
+            return mapping[candidate]
+    return None
+
+
+def _vus_code_length(value) -> int:
+    text = _normalize_code(value)
+    digits = ''.join(ch for ch in text if ch.isdigit())
+    return len(digits)
 
 
 def _harmonize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    renamed = {}
     direct_map = {_normalize(column): column for column in REQUIRED_COLUMNS}
-    for col in df.columns:
+    mapped_columns: dict[str, int] = {}
+    for col_idx, col in enumerate(df.columns):
         normalized = _normalize(col)
+        target = None
         if normalized in direct_map:
-            renamed[col] = direct_map[normalized]
-            continue
-        for alias, target in HEADER_ALIASES.items():
-            if alias in normalized:
-                renamed[col] = target
-                break
-    out = df.rename(columns=renamed)
+            target = direct_map[normalized]
+        else:
+            for alias, alias_target in HEADER_ALIASES.items():
+                if alias in normalized:
+                    target = alias_target
+                    break
+        if target and target not in mapped_columns:
+            mapped_columns[target] = col_idx
+
+    out = pd.DataFrame(index=df.index)
+    for column in REQUIRED_COLUMNS:
+        if column in mapped_columns:
+            out[column] = df.iloc[:, mapped_columns[column]].astype(str).fillna('')
+        else:
+            out[column] = ''
     for column in REQUIRED_COLUMNS:
         if column not in out.columns:
             out[column] = ''
+
     return out[REQUIRED_COLUMNS]
 
 
@@ -228,19 +306,31 @@ def merge_excel_files(files) -> Path:
     merged_wb.save(path)
     return path
 
+
 def decode_for_admin(path: Path) -> Path:
     df = _read_harmonized_dataframe(path)
-    df['vus_naimenovanie'] = df.apply(
-        lambda row: VUS_DECODING.get(str(row['vus_no']).strip(), row['vus_naimenovanie']),
-        axis=1,
-    )
+    officer_vus, nonoffice_vus, nonoffice_positions = _load_decoding_maps()
 
-    officer_mask = df['programma_podgotovki'].str.contains('офицер', case=False, na=False)
+    def _decode_vus(row) -> str:
+        if _vus_code_length(row['vus_no']) == 6:
+            officer_name = _lookup_decoding(row['vus_no'], officer_vus, 6)
+            if officer_name:
+                return officer_name
+        elif _vus_code_length(row['vus_no']) == 3:
+            nonoffice_name = _lookup_decoding(row['vus_no'], nonoffice_vus, 3)
+            if nonoffice_name:
+                return nonoffice_name
+
+        return row['vus_naimenovanie']
+
+    df['vus_naimenovanie'] = df.apply(_decode_vus, axis=1)
+
+    officer_mask = df['vus_no'].map(lambda value: _vus_code_length(value) == 6)
+    nonofficer_mask = df['vus_no'].map(lambda value: _vus_code_length(value) == 3)
+
     df.loc[officer_mask, ['doljnost_no', 'doljnost_naimenovanie']] = ''
-
-    sergeant_mask = ~officer_mask
-    df.loc[sergeant_mask, 'doljnost_naimenovanie'] = df.loc[sergeant_mask, 'doljnost_no'].map(
-        lambda val: POSITION_DECODING.get(str(val).strip(), '')
+    df.loc[nonofficer_mask, 'doljnost_naimenovanie'] = df.loc[nonofficer_mask, 'doljnost_no'].map(
+        lambda val: _lookup_decoding(val, nonoffice_positions, 3) or ''
     )
 
     decoded_path = path.with_name(f'{path.stem}_decoded.xlsx')
