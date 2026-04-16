@@ -17,6 +17,7 @@ urlpatterns = [
         name='password_change_done',
     ),
     path('', views.dashboard, name='dashboard'),
+    path('questionnaire/', views.questionnaire, name='questionnaire'),
     path('upload/', views.upload_files, name='upload_files'),
     path('download/merged/', views.download_merged, name='download_merged'),
     path('decode/', views.decode_vus, name='decode_vus'),

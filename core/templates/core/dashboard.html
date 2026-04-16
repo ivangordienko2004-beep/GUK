@@ -12,9 +12,17 @@
     <section class="card">
       <div class="header-row">
         <h1>Объединение файлов ВУЦ</h1>
-        <a href="{% url 'logout' %}" class="btn danger">Выйти</a>
+        <form action="{% url 'logout' %}" method="post" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="btn danger">Выйти</button>
+        </form>
       </div>
-      <p class="subtitle">Милитари-режим: загрузка Excel, объединение, расшифровка и отчёт.</p>
+
+      <p class="subtitle">Загрузка Excel, объединение, расшифровка и отчёт.</p>
+
+      <div class="actions">
+        <a href="{% url 'questionnaire' %}" class="btn secondary">Открыть опросник</a>
+      </div>
 
       {% if messages %}
         {% for message in messages %}
@@ -24,11 +32,27 @@
 
       <form action="{% url 'upload_files' %}" method="post" enctype="multipart/form-data" class="stack">
         {% csrf_token %}
+        <label for="{{ form.files.id_for_label }}">Выберите Excel-файлы</label>
         {{ form.files }}
+        <div id="selected-files" class="file-list">
+          {% if uploaded_file_names %}
+            <strong>Последние выбранные файлы:</strong>
+            <ul>
+              {% for file_name in uploaded_file_names %}
+                <li>{{ file_name }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <span>Файлы пока не выбраны.</span>
+          {% endif %}
+        </div>
         <button type="submit" class="btn">Загрузить и объединить</button>
       </form>
 
       {% if merged_file %}
+        <div class="alert">
+          Готов итоговый файл: <strong>{{ merged_file.name }}</strong>
+        </div>
         <div class="actions">
           <a href="{% url 'download_merged' %}" class="btn">Скачать объединённый Excel</a>
           {% if request.user.is_staff %}
@@ -39,5 +63,28 @@
       {% endif %}
     </section>
   </main>
+
+  <script>
+    (function () {
+      const input = document.getElementById("{{ form.files.id_for_label }}");
+      const output = document.getElementById("selected-files");
+
+      if (!input || !output) return;
+
+      input.addEventListener("change", function () {
+        const files = Array.from(input.files || []);
+        if (!files.length) {
+          output.innerHTML = "<span>Файлы пока не выбраны.</span>";
+          return;
+        }
+
+        const items = files.map(file => `<li>${file.name}</li>`).join("");
+        output.innerHTML = `
+          <strong>Выбраны файлы:</strong>
+          <ul>${items}</ul>
+        `;
+      });
+    })();
+  </script>
 </body>
 </html>
