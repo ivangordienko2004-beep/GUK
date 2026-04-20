@@ -8,7 +8,8 @@ from django.http import FileResponse, Http404
 from django.shortcuts import redirect, render
 
 from .forms import ExcelUploadForm
-from .services import create_report, decode_for_admin, merge_excel_files
+from .services import create_report as generate_plan_report
+from .services import decode_for_admin, merge_excel_files
 
 
 SESSION_KEY = 'merged_file_path'
@@ -95,5 +96,5 @@ def create_report(request):
     if not path:
         raise Http404('Сначала загрузите и объедините файлы.')
 
-    report = create_report(path)
+    report = generate_plan_report(path)
     return FileResponse(report.open('rb'), as_attachment=True, filename=report.name)
