@@ -9,6 +9,7 @@ import pandas as pd
 from django.conf import settings
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 MAPPING_DIR = Path(settings.BASE_DIR) / 'Mapping'
 OFFICER_VUS_PATH = MAPPING_DIR / 'officer_vus.json'
@@ -332,67 +333,227 @@ def decode_for_admin(path: Path) -> Path:
     return decoded_path
 
 
-def create_report(path: Path) -> Path:
-    df = _read_harmonized_dataframe(path)
-    for col in ['planiruetsya_studentov', 'planiruetsya_prepodavatelej']:
-        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+def _apply_border_to_range(ws, r1, c1, r2, c2, border):
+    for r in range(r1, r2 + 1):
+        for c in range(c1, c2 + 1):
+            ws.cell(row=r, column=c).border = border
 
-    wb = Workbook()
-    ws = wb.active
-    ws.title = 'Отчёт'
 
-    border = Border(
-        left=Side(style='thin', color='000000'),
-        right=Side(style='thin', color='000000'),
-        top=Side(style='thin', color='000000'),
-        bottom=Side(style='thin', color='000000'),
-    )
-    fill = PatternFill('solid', fgColor='4B5320')
-    title_fill = PatternFill('solid', fgColor='6B8E23')
-    white_bold = Font(color='FFFFFF', bold=True)
-    center = Alignment(horizontal='center', vertical='center', wrap_text=True)
-
-    ws.merge_cells('A1:H1')
-    ws['A1'] = 'ИТОГОВЫЙ ПЛАН СБОРОВ'
-    ws['A1'].font = Font(bold=True, color='FFFFFF', size=14)
-    ws['A1'].fill = fill
-    ws['A1'].alignment = center
-
-    headers = ['Округ', 'ОВУ', 'ВУЗ', 'ВУС', 'Наименование ВУС', 'Программа', 'Студентов', 'Преподавателей']
-    for idx, header in enumerate(headers, start=1):
-        cell = ws.cell(row=2, column=idx, value=header)
-        cell.font = white_bold
-        cell.fill = title_fill
-        cell.alignment = center
+def _fill_row(ws, row, c1, c2, fill, border):
+    for c in range(c1, c2 + 1):
+        cell = ws.cell(row=row, column=c)
+        cell.fill = fill
         cell.border = border
 
-    current = 3
-    for _, row in df.iterrows():
-        values = [
-            row['okrug_vuza'],
-            row['ovu_otv_podgotovku'],
-            row['nazvanie_vuza'],
-            row['vus_no'],
-            row['vus_naimenovanie'],
-            row['programma_podgotovki'],
-            int(row['planiruetsya_studentov']),
-            int(row['planiruetsya_prepodavatelej']),
+
+def _okrug_full_name(abbr: str) -> str:
+    if not isinstance(abbr, str):
+        return 'Военный округ'
+    key = abbr.strip().upper().replace('Ё', 'Е')
+    mapping = {
+        'МВО': 'Московский военный округ',
+        'ЛЕНВО': 'Ленинградский военный округ',
+        'ЮВО': 'Южный военный округ',
+        'ЦВО': 'Центральный военный округ',
+        'ВВО': 'Восточный военный округ',
+    }
+    return mapping.get(key, f'{abbr} военный округ')
+
+
+def _write_section(wb: Workbook, title: str, df: pd.DataFrame, is_sergeants: bool):
+    fill_title = PatternFill('solid', fgColor='C6E0B4')
+    fill_header = PatternFill('solid', fgColor='FFE699')
+    fill_okrug = PatternFill('solid', fgColor='F8CBAD')
+    fill_ovu = PatternFill('solid', fgColor='BDD7EE')
+    fill_sub = PatternFill('solid', fgColor='C6E0B4')
+    fill_grand = PatternFill('solid', fgColor='7030A0')
+    fill_a_orange = PatternFill('solid', fgColor='C6E0B4')
+
+    side = Side(border_style='medium', color='000000')
+    border = Border(left=side, right=side, top=side, bottom=side)
+
+    font_title = Font(bold=True, size=14)
+    font_bold = Font(bold=True)
+    center_wrap = Alignment(horizontal='center', vertical='center', wrap_text=True)
+
+    if not is_sergeants:
+        max_col = 8
+        col_stud = 3
+        col_teach = 7
+        detail_cols = [
+            'vus_no', 'vus_naimenovanie', 'planiruetsya_studentov',
+            'mesto_provedeniya_uchebnogo_sbora',
+            'srok_provedeniya_nachalo', 'srok_provedeniya_okonchanie',
+            'planiruetsya_prepodavatelej', 'sbor_stazhirovka',
         ]
-        for idx, value in enumerate(values, start=1):
-            cell = ws.cell(row=current, column=idx, value=value)
-            cell.border = border
-            cell.alignment = center
-        current += 1
+    else:
+        max_col = 9
+        col_stud = 5
+        col_teach = 9
+        detail_cols = [
+            'vus_no', 'vus_naimenovanie',
+            'doljnost_no', 'doljnost_naimenovanie',
+            'planiruetsya_studentov',
+            'mesto_provedeniya_uchebnogo_sbora',
+            'srok_provedeniya_nachalo', 'srok_provedeniya_okonchanie',
+            'planiruetsya_prepodavatelej',
+        ]
 
-    ws.cell(row=current, column=6, value='ИТОГО').font = Font(bold=True)
-    ws.cell(row=current, column=7, value=int(df['planiruetsya_studentov'].sum())).font = Font(bold=True)
-    ws.cell(row=current, column=8, value=int(df['planiruetsya_prepodavatelej'].sum())).font = Font(bold=True)
-    for c in range(1, 9):
-        ws.cell(row=current, column=c).border = border
-        ws.cell(row=current, column=c).alignment = center
+    ws = wb.create_sheet(title=title)
+    ws.default_row_height = 15
+    r = 1
 
-    for col in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']:
-        ws.column_dimensions[col].width = 24
+    ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=max_col)
+    c = ws.cell(row=r, column=1, value=title)
+    c.font, c.alignment = font_title, center_wrap
+    _apply_border_to_range(ws, r, 1, r, max_col, border)
+    r += 1
+
+    if not is_sergeants:
+        top = ['Код ВУС', 'Наименование ВУС', 'Кол-во студентов', 'Место сбора',
+               'Срок проведения', None, 'Кол-во препод.', 'Сбор/стажировка']
+        bot = [None, None, None, None, 'начало', 'окончание', None, None]
+        span_c1 = 5
+    else:
+        top = ['№ ВУС', 'Наименование ВУС', '№ должности', 'Наименование должности',
+               'Кол-во студентов', 'Место сбора', 'Срок проведения', None, 'Кол-во препод.']
+        bot = [None, None, None, None, None, None, 'начало', 'окончание', None]
+        span_c1 = 7
+
+    for col, text in enumerate(top, start=1):
+        if text is None:
+            continue
+        if text == 'Срок проведения':
+            ws.merge_cells(start_row=r, start_column=span_c1, end_row=r, end_column=span_c1 + 1)
+            cc = ws.cell(row=r, column=span_c1, value=text)
+            cc.font, cc.alignment = font_bold, center_wrap
+            _apply_border_to_range(ws, r, span_c1, r, span_c1 + 1, border)
+        else:
+            ws.merge_cells(start_row=r, start_column=col, end_row=r + 1, end_column=col)
+            cc = ws.cell(row=r, column=col, value=text)
+            cc.font, cc.alignment = font_bold, center_wrap
+            _apply_border_to_range(ws, r, col, r + 1, col, border)
+
+    for col, text in enumerate(bot, start=1):
+        if text:
+            cc = ws.cell(row=r + 1, column=col, value=text)
+            cc.font, cc.alignment, cc.border = font_bold, center_wrap, border
+    r += 2
+
+    grand_stud = grand_teach = 0
+    for okrug, g_ok in df.groupby('okrug_vuza', sort=False):
+        okrug_abbr = str(okrug or '').strip().upper()
+        okrug_full = _okrug_full_name(okrug_abbr)
+
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=max_col)
+        c = ws.cell(row=r, column=1, value=okrug_full)
+        c.font, c.fill, c.alignment = font_bold, fill_okrug, center_wrap
+        _apply_border_to_range(ws, r, 1, r, max_col, border)
+        r += 1
+
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=max_col)
+        c = ws.cell(
+            row=r,
+            column=1,
+            value='На территории военного округа по месту расположения образовательной организации',
+        )
+        c.font, c.fill, c.alignment = font_bold, fill_title, center_wrap
+        _apply_border_to_range(ws, r, 1, r, max_col, border)
+        r += 1
+
+        ok_stud = int(g_ok['planiruetsya_studentov'].sum())
+        ok_teach = int(g_ok['planiruetsya_prepodavatelej'].sum())
+
+        for ovu, g_ovu in g_ok.groupby('ovu_otv_podgotovku', sort=False):
+            ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=max_col)
+            c = ws.cell(row=r, column=1, value=str(ovu))
+            c.font, c.fill, c.alignment = font_bold, fill_ovu, center_wrap
+            _apply_border_to_range(ws, r, 1, r, max_col, border)
+            r += 1
+
+            for vuza, g_vuz in g_ovu.groupby('nazvanie_vuza', sort=False):
+                ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=max_col)
+                c = ws.cell(row=r, column=1, value=str(vuza))
+                c.font, c.fill, c.alignment = font_bold, fill_title, center_wrap
+                _apply_border_to_range(ws, r, 1, r, max_col, border)
+                r += 1
+
+                for _, rec in g_vuz.iterrows():
+                    vals = []
+                    for key in detail_cols:
+                        val = rec.get(key, '')
+                        if 'srok_provedeniya' in key and pd.notna(val):
+                            val = pd.to_datetime(val).strftime('%d.%m.%Y')
+                        vals.append(val)
+                    for i, value in enumerate(vals, start=1):
+                        cell = ws.cell(row=r, column=i, value=value)
+                        cell.alignment = center_wrap
+                        cell.border = border
+                    r += 1
+
+            sub_stud = int(g_ovu['planiruetsya_studentov'].sum())
+            sub_teach = int(g_ovu['planiruetsya_prepodavatelej'].sum())
+
+            ws.cell(row=r, column=1).fill = fill_a_orange
+            ws.cell(row=r, column=1).border = border
+            _fill_row(ws, r, 2, max_col, fill_sub, border)
+
+            lab = ws.cell(row=r, column=2, value=f'Всего за {ovu}')
+            lab.font, lab.alignment = font_bold, center_wrap
+
+            s = ws.cell(row=r, column=col_stud, value=sub_stud)
+            s.fill, s.border, s.alignment = fill_header, border, center_wrap
+            t = ws.cell(row=r, column=col_teach, value=sub_teach)
+            t.fill, t.border, t.alignment = fill_header, border, center_wrap
+            r += 1
+
+        ws.cell(row=r, column=1).fill = fill_grand
+        ws.cell(row=r, column=1).border = border
+        _fill_row(ws, r, 2, max_col, fill_grand, border)
+
+        lab = ws.cell(row=r, column=2, value=f'ВСЕГО ЗА {okrug_abbr}')
+        lab.font, lab.alignment = font_bold, center_wrap
+
+        s = ws.cell(row=r, column=col_stud, value=ok_stud)
+        s.fill, s.border, s.alignment = fill_header, border, center_wrap
+        t = ws.cell(row=r, column=col_teach, value=ok_teach)
+        t.fill, t.border, t.alignment = fill_header, border, center_wrap
+        r += 1
+
+        grand_stud += ok_stud
+        grand_teach += ok_teach
+
+    ws.cell(row=r, column=1).fill = fill_grand
+    ws.cell(row=r, column=1).border = border
+    _fill_row(ws, r, 2, max_col, fill_grand, border)
+
+    lab = ws.cell(row=r, column=2, value='ИТОГО')
+    lab.font, lab.alignment = Font(bold=True, size=12), center_wrap
+
+    s = ws.cell(row=r, column=col_stud, value=grand_stud)
+    s.fill, s.border, s.alignment = fill_header, border, center_wrap
+    t = ws.cell(row=r, column=col_teach, value=grand_teach)
+    t.fill, t.border, t.alignment = fill_header, border, center_wrap
+
+    ws.column_dimensions[get_column_letter(2)].width = 50
+
+
+def create_report(path: Path) -> Path:
+    df = _read_harmonized_dataframe(path)
+    for col in ('srok_provedeniya_nachalo', 'srok_provedeniya_okonchanie'):
+        df[col] = pd.to_datetime(df[col], errors='coerce')
+    for col in ('planiruetsya_studentov', 'planiruetsya_prepodavatelej'):
+        df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+
+    cadre_df = df[df['programma_podgotovki'] == 'Офицеры кадра']
+    reserve_df = df[df['programma_podgotovki'] == 'Офицеры запаса']
+    others_df = df[~df['programma_podgotovki'].isin(['Офицеры кадра', 'Офицеры запаса'])]
+
+    wb = Workbook()
+    wb.remove(wb.active)
+    _write_section(wb, 'I. Офицеры кадра', cadre_df, is_sergeants=False)
+    _write_section(wb, 'II. Офицеры запаса', reserve_df, is_sergeants=False)
+    _write_section(wb, 'III. Сержанты и солдаты', others_df, is_sergeants=True)
 
     report_path = path.with_name(f'{path.stem}_report.xlsx')
     wb.save(report_path)
