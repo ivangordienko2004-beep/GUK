@@ -1,0 +1,8 @@
+@"
+.venv/
+__pycache__/
+*.pyc
+db.sqlite3
+media/exports/*.xlsx
+media/exports/*.csv
+"@ | Set-Content .gitignore
