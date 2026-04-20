@@ -7,7 +7,7 @@ import uuid
 
 import pandas as pd
 from django.conf import settings
-from openpyxl import Workbook, load_workbook
+from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 
 MAPPING_DIR = Path(settings.BASE_DIR) / 'Mapping'
@@ -58,33 +58,31 @@ OUTPUT_COLUMNS = [
 
 HEADER_ALIASES = {
     'округ вуза': 'okrug_vuza',
-    'ову, отв. за подготовку': 'ovu_otv_podgotovku',
+    'ову отв за подготовку': 'ovu_otv_podgotovku',
     'наименование вуза': 'nazvanie_vuza',
     'вуз': 'nazvanie_vuza',
     'код вус': 'vus_no',
-    'вус №': 'vus_no',
+    'вус': 'vus_no',
     'вус наименование': 'vus_naimenovanie',
-    'должность №': 'doljnost_no',
+    'должность': 'doljnost_no',
     'должность наименование': 'doljnost_naimenovanie',
-    'сбор/стаж': 'sbor_stazhirovka',
-    'сбор/стажировка': 'sbor_stazhirovka',
+    'сбор стаж': 'sbor_stazhirovka',
+    'сбор стажировка': 'sbor_stazhirovka',
     'программа': 'programma_podgotovki',
     'программа подготовки': 'programma_podgotovki',
     'место проведения': 'mesto_provedeniya_uchebnogo_sbora',
     'место проведения сбора': 'mesto_provedeniya_uchebnogo_sbora',
     'преподавателей': 'planiruetsya_prepodavatelej',
-    'планируем преподавателей': 'planiruetsya_prepodavatelej',
     'студентов': 'planiruetsya_studentov',
-    'планируем студентов': 'planiruetsya_studentov',
     'начало': 'srok_provedeniya_nachalo',
     'окончание': 'srok_provedeniya_okonchanie',
-    'фио ответ': 'fio_otvetstvennogo',
+    'фио ответственного': 'fio_otvetstvennogo',
     'мобильный': 'mobilnyy',
 }
 
 
 def _normalize(value: str) -> str:
-    return ''.join(ch for ch in str(value).lower() if ch.isalnum() or ch )
+    return ''.join(ch for ch in str(value).lower() if ch.isalnum() or ch.isspace()).strip()
 
 
 def _normalize_code(value) -> str:
@@ -146,11 +144,8 @@ def _load_decoding_maps() -> tuple[dict[str, str], dict[str, str], dict[str, str
 
 
 def _lookup_decoding(value, mapping: dict[str, str], width: int) -> str | None:
-    print("Looking up value: ", value)
     for candidate in _code_candidates(value, width):
-        print(candidate, mapping)
         if candidate in mapping:
-            print(f"Found match for {value}: {mapping[candidate]}")
             return mapping[candidate]
     return None
 
@@ -164,6 +159,7 @@ def _vus_code_length(value) -> int:
 def _harmonize_columns(df: pd.DataFrame) -> pd.DataFrame:
     direct_map = {_normalize(column): column for column in REQUIRED_COLUMNS}
     mapped_columns: dict[str, int] = {}
+
     for col_idx, col in enumerate(df.columns):
         normalized = _normalize(col)
         target = None
@@ -174,17 +170,15 @@ def _harmonize_columns(df: pd.DataFrame) -> pd.DataFrame:
                 if alias in normalized:
                     target = alias_target
                     break
+
         if target and target not in mapped_columns:
             mapped_columns[target] = col_idx
 
     out = pd.DataFrame(index=df.index)
     for column in REQUIRED_COLUMNS:
         if column in mapped_columns:
-            out[column] = df.iloc[:, mapped_columns[column]].astype(str).fillna('')
+            out[column] = df.iloc[:, mapped_columns[column]].fillna('').astype(str)
         else:
-            out[column] = ''
-    for column in REQUIRED_COLUMNS:
-        if column not in out.columns:
             out[column] = ''
 
     return out[REQUIRED_COLUMNS]
@@ -202,6 +196,7 @@ def _detect_header_depth(raw_df: pd.DataFrame) -> int:
 def _load_tabular_data(file) -> pd.DataFrame:
     if hasattr(file, 'seek'):
         file.seek(0)
+
     raw_df = pd.read_excel(file, header=None, dtype=str).fillna('')
     header_depth = _detect_header_depth(raw_df)
 
@@ -266,44 +261,43 @@ def _read_harmonized_dataframe(path_or_file) -> pd.DataFrame:
     return _load_tabular_data(path_or_file)
 
 
+def _remove_empty_rows(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df
+
+    cleaned = df.copy().fillna('')
+    mask = cleaned.apply(lambda row: any(str(value).strip() for value in row), axis=1)
+    return cleaned.loc[mask].reset_index(drop=True)
+
+
 def merge_excel_files(files) -> Path:
     files = list(files)
     if not files:
         raise ValueError('Не переданы файлы для объединения.')
 
-    def _open_workbook(file_obj):
+    frames: list[pd.DataFrame] = []
+
+    for file_obj in files:
         if hasattr(file_obj, 'seek'):
             file_obj.seek(0)
-        return load_workbook(file_obj, data_only=True)
 
-    # Берём первый файл как шаблон: сохраняются заголовок, форматирование,
-    # объединённые ячейки и ширины столбцов.
-    merged_wb = _open_workbook(files[0])
-    merged_ws = merged_wb.active
+        df = _read_harmonized_dataframe(file_obj)
+        df = _remove_empty_rows(df)
 
-    # Оставляем только первые 3 строки заголовка
-    if merged_ws.max_row > 3:
-        merged_ws.delete_rows(4, merged_ws.max_row - 3)
+        if not df.empty:
+            frames.append(df)
 
-    next_row = 4
-    for file_obj in files:
-        wb = _open_workbook(file_obj)
-        ws = wb.active
+    if not frames:
+        raise ValueError('Не удалось прочитать данные из файлов.')
 
-        # Данные начинаются с 4-й строки
-        for row in ws.iter_rows(min_row=4, max_row=ws.max_row, values_only=True):
-            if all(value in (None, '') for value in row):
-                continue
-
-            for col_idx, value in enumerate(row, start=1):
-                merged_ws.cell(row=next_row, column=col_idx, value=value)
-
-            next_row += 1
+    merged_df = pd.concat(frames, ignore_index=True)
+    merged_df = _remove_empty_rows(merged_df)
 
     output_dir = Path(settings.MEDIA_ROOT) / 'exports'
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / f'merged_{uuid.uuid4().hex}.xlsx'
-    merged_wb.save(path)
+
+    _export_merged_table(merged_df, path)
     return path
 
 

@@ -90,3 +90,12 @@ input[type='password'] {
   padding: 9px;
   box-sizing: border-box;
 }
+
+
+.btn.secondary {
+  background: #445a1f;
+}
+
+.btn.secondary:hover {
+  background: #374a18;
+}

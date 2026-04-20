@@ -1,0 +1,1997 @@
+<!DOCTYPE html>
+<html lang="ru">
+{% load static %}
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Опросник ВУС — единый формат ввода</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #121a2b;
+      --muted: #8aa0bf;
+      --text: #e8eefc;
+      --accent: #7cc4ff;
+      --ok: #17c964;
+      --warn: #f5a524;
+      --err: #f31260;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(180deg, #0b1220, #0b1220 40%, #0d172a);
+      color: var(--text);
+    }
+
+    header {
+      padding: 20px;
+      border-bottom: 1px solid #1f2b43;
+      background: #0c1424;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    h1 {
+      margin: 0 0 6px 0;
+      letter-spacing: .3px;
+    }
+
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    main {
+      padding: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid #1f2b43;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+    }
+
+    .field {
+      display: flex;
+      font-size: 20px;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .label {
+      font-size: 20px;
+      color: var(--muted);
+      letter-spacing: .3px;
+    }
+
+    .req {
+      color: var(--warn);
+      margin-left: 6px;
+    }
+
+    select,
+    input,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #21304d;
+      background: #0c1526;
+      color: var(--text);
+      outline: none;
+      font-size: 14px;
+    }
+
+    select:focus,
+    input:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124, 196, 255, .15);
+    }
+
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .row {
+      display: contents;
+    }
+
+    .col-6 {
+      grid-column: span 6 / span 6;
+    }
+
+    .col-4 {
+      grid-column: span 4 / span 4;
+    }
+
+    .col-3 {
+      grid-column: span 3 / span 3;
+    }
+
+    .col-2 {
+      grid-column: span 2 / span 2;
+    }
+
+    .col-8 {
+      grid-column: span 8 / span 8;
+    }
+
+    .col-12 {
+      grid-column: span 12 / span 12;
+    }
+
+    .help {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #1f2b43;
+      background: #0e1a31;
+      color: var(--text);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn:hover {
+      filter: brightness(1.15);
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #1b76ff, #1552d1);
+      border-color: #1a60e6;
+    }
+
+    .btn-ok {
+      background: linear-gradient(180deg, #19c37d, #0ea86b);
+      border-color: #16b37a;
+    }
+
+    .btn-warn {
+      background: linear-gradient(180deg, #ff5b5b, #d61f1f);
+      border-color: #c81d1d;
+    }
+
+    .btn-ghost {
+      background: #0c1526;
+    }
+
+    .btn-mini {
+      padding: 6px 9px;
+      font-size: 12px;
+      border-radius: 8px;
+      line-height: 1;
+    }
+
+    .error {
+      color: var(--err);
+      font-size: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #1f2b43;
+      background: #0e1830;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .table-mini {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .table-mini th,
+    .table-mini td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #1f2b43;
+      text-align: left;
+    }
+
+    .footer {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .divider {
+      height: 1px;
+      background: #1f2b43;
+      margin: 12px 0;
+    }
+
+    .date-input {
+      color-scheme: dark;
+      height: 40px;
+      padding: 10px 12px;
+      box-sizing: border-box;
+    }
+
+    .strict-autocomplete {
+      position: relative;
+      width: 100%;
+    }
+
+    .strict-autocomplete input {
+      width: 100%;
+    }
+
+    .strict-autocomplete .dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--card);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      border-top: none;
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .strict-autocomplete .dropdown.show {
+      display: block;
+    }
+
+    .strict-autocomplete .dropdown-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid #21304d;
+      font-size: 13px;
+      transition: background-color 0.2s ease;
+    }
+
+    .strict-autocomplete .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .strict-autocomplete .dropdown-item:hover,
+    .strict-autocomplete .dropdown-item.highlighted {
+      background: #21304d;
+    }
+
+    .strict-autocomplete .dropdown-item.no-results {
+      color: var(--muted);
+      font-style: italic;
+      cursor: default;
+    }
+
+    .strict-autocomplete .dropdown-item.no-results:hover {
+      background: transparent;
+    }
+
+    .field-with-override {
+      position: relative;
+    }
+
+    .field-with-override select,
+    .field-with-override input,
+    .field-with-override textarea {
+      padding-right: 60px;
+    }
+
+    .field-with-override .strict-autocomplete input {
+      padding-right: 60px;
+    }
+
+    .override-btn {
+      position: absolute;
+      top: 24px;
+      right: 2px;
+      padding: 3px 6px;
+      font-size: 9px;
+      background: linear-gradient(180deg, #d4843a, #b8732f);
+      color: white;
+      border: none;
+      border-radius: 0 8px 0 8px;
+      cursor: pointer;
+      z-index: 10;
+      line-height: 1.1;
+      min-width: 50px;
+      text-align: center;
+      opacity: 0.8;
+    }
+
+    .override-btn:hover {
+      background: linear-gradient(180deg, #e6944a, #d4843a);
+      opacity: 1;
+    }
+
+    .override-btn:active {
+      background: linear-gradient(180deg, #b8732f, #a66429);
+    }
+
+    .field-overridden {
+      border-color: var(--warn) !important;
+      box-shadow: 0 0 0 3px rgba(245, 165, 36, 0.08) !important;
+      background-color: rgba(245, 165, 36, 0.03) !important;
+    }
+
+    .override-indicator {
+      font-size: 11px;
+      color: var(--warn);
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    .override-warning {
+      background: rgba(245, 165, 36, 0.06);
+      border: 1px solid rgba(245, 165, 36, 0.3);
+      border-radius: 10px;
+      padding: 12px;
+      margin: 16px 0;
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .override-warning strong {
+      color: var(--warn);
+    }
+
+
+    @media (max-width: 900px) {
+
+      .col-8,
+      .col-6 {
+        grid-column: span 12 / span 12;
+      }
+
+      .col-4 {
+        grid-column: span 6 / span 6;
+      }
+
+      .col-3 {
+        grid-column: span 6 / span 6;
+      }
+
+      .col-2 {
+        grid-column: span 4 / span 4;
+      }
+    }
+
+    @media (max-width: 600px) {
+
+      .col-6,
+      .col-4,
+      .col-3,
+      .col-2,
+      .col-8,
+      .col-12 {
+        grid-column: span 12 / span 12;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Опросник для формирования единой таблицы (ВУС)</h1>
+    <p>Фиксированный формат ввода + экспорт в Excel по образцу. Поля с <span class="req">*</span> — обязательные.</p>
+    <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+      <a href="{% url 'dashboard' %}" style="display:inline-block; padding:10px 14px; border-radius:12px; border:1px solid #1f2b43; background:#0e1a31; color:var(--text); text-decoration:none; font-weight:600;">← На главную</a>
+      <a href="{% url 'logout' %}" style="display:inline-block; padding:10px 14px; border-radius:12px; border:1px solid #1f2b43; background:#3a1620; color:var(--text); text-decoration:none; font-weight:600;">Выйти</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="grid">
+        <div class="row col-12">
+          <div class="field col-4 field-with-override">
+            <label class="label" for="okrugVuza">ОКРУГ ВУЗа <span class="req">*</span></label>
+            <select id="okrugVuza" required></select>
+            <button type="button" class="override-btn" data-field="okrugVuza">ПРИНУД.</button>
+          </div>
+          <div class="field col-8 field-with-override">
+            <label class="label" for="ovuOtv">ОВУ, отв. за подготовку <span class="req">*</span></label>
+            <select id="ovuOtv" required></select>
+            <button type="button" class="override-btn" data-field="ovuOtv">ПРИНУД.</button>
+          </div>
+        </div>
+
+        <div class="row col-12">
+          <div class="field col-8 field-with-override">
+            <label class="label" for="vuzName">Наименование ВУЗа <span class="req">*</span></label>
+            <div class="strict-autocomplete" id="vuz_container">
+              <input id="vuzName" type="text" placeholder="Начните вводить название ВУЗа..." required
+                autocomplete="off" />
+              <div class="dropdown" id="vuz_dropdown"></div>
+            </div>
+            <button type="button" class="override-btn" data-field="vuzName">ПРИНУД.</button>
+            <div class="help">Начните вводить название ВУЗа - появится список для выбора. При выборе аббревиатура
+              заполнится автоматически.</div>
+          </div>
+          <div class="field col-4 field-with-override">
+            <label class="label" for="abbr">Аббревиатура <span class="req">*</span></label>
+            <input id="abbr" type="text" inputmode="latin" placeholder="ВГУ" required readonly />
+            <button type="button" class="override-btn" data-field="abbr">ПРИНУД.</button>
+          </div>
+        </div>
+
+        <div class="row col-12">
+          <div class="field col-4 field-with-override">
+            <label class="label" for="program">Программа подготовки <span class="req">*</span></label>
+            <select id="program" required></select>
+            <button type="button" class="override-btn" data-field="program">ПРИНУД.</button>
+          </div>
+          <div class="field col-4 field-with-override">
+            <label class="label" for="vusNaimNo">ВУС-№ <span class="req">*</span></label>
+            <div class="strict-autocomplete" id="vus_container">
+              <input id="vusNaimNo" type="text" inputmode="numeric" placeholder="020400" maxlength="6" required
+                autocomplete="off" />
+              <div class="dropdown" id="vus_dropdown"></div>
+            </div>
+            <button type="button" class="override-btn" data-field="vusNaimNo">ПРИНУД.</button>
+            <div class="help">6 цифр для офицеров, 3 для остальных. Выберите из списка.</div>
+          </div>
+          <div class="field col-4 field-with-override">
+            <label class="label" for="posNo">Должность — №</label>
+            <div class="strict-autocomplete" id="pos_container">
+              <input id="posNo" type="text" inputmode="numeric" placeholder="например, 123" maxlength="3"
+                autocomplete="off" />
+              <div class="dropdown" id="pos_dropdown"></div>
+            </div>
+            <button type="button" class="override-btn" data-field="posNo">ПРИНУД.</button>
+            <div class="help">Для офицеров должно быть пустым. Выберите из списка.</div>
+          </div>
+
+        </div>
+
+        <div class="row col-12">
+          <div class="field col-6 field-with-override">
+            <label class="label" for="sbor">Сбор / стажировка <span class="req">*</span></label>
+            <select id="sbor" required></select>
+            <button type="button" class="override-btn" data-field="sbor">ПРИНУД.</button>
+          </div>
+          <div class="field col-6 field-with-override">
+            <label class="label" for="okrugSbora">ОКРУГ проведения сборов <span class="req">*</span></label>
+            <select id="okrugSbora" required></select>
+            <button type="button" class="override-btn" data-field="okrugSbora">ПРИНУД.</button>
+          </div>
+        </div>
+
+        <div class="row col-12">
+          <div class="field col-4 field-with-override">
+            <label class="label" for="place_num">Номер воинской части</label>
+            <div class="strict-autocomplete" id="place_num_container">
+              <input id="place_num" type="text" placeholder="Начните вводить номер части..." autocomplete="off" />
+              <div class="dropdown" id="place_num_dropdown"></div>
+            </div>
+            <button type="button" class="override-btn" data-field="place_num">ПРИНУД.</button>
+            <div class="help">Начните вводить номер части - появится список для выбора. При выборе город заполнится
+              автоматически.</div>
+          </div>
+
+          <div class="field col-8 field-with-override">
+            <label class="label" for="place_city">Город проведения учебного сбора <span class="req">*</span></label>
+            <div class="strict-autocomplete" id="place_city_container">
+              <input id="place_city" type="text" placeholder="Начните вводить название города..." required
+                autocomplete="off" />
+              <div class="dropdown" id="place_city_dropdown"></div>
+            </div>
+            <button type="button" class="override-btn" data-field="place_city">ПРИНУД.</button>
+            <div class="help">Только из списка доступных мест</div>
+          </div>
+        </div>
+
+        <div class="row col-12">
+          <div class="field col-3 field-with-override">
+            <label class="label" for="prepods">Планируется (чел.) — преподавателей <span class="req">*</span></label>
+            <input id="prepods" type="number" min="0" step="1" placeholder="0" required />
+            <button type="button" class="override-btn" data-field="prepods">ПРИНУД.</button>
+          </div>
+          <div class="field col-3 field-with-override">
+            <label class="label" for="students">Планируется (чел.) — студентов <span class="req">*</span></label>
+            <input id="students" type="number" min="0" step="1" placeholder="0" required />
+            <button type="button" class="override-btn" data-field="students">ПРИНУД.</button>
+          </div>
+          <div class="field col-3">
+            <label class="label" for="dateStart">
+              Срок проведения —<br>
+              начало <span class="req">*</span>
+            </label>
+            <input id="dateStart" type="date" class="date-input" required />
+          </div>
+          <div class="field col-3 field-with-override">
+            <label class="label" for="dateEnd">Срок проведения — окончание <span class="req">*</span></label>
+            <input id="dateEnd" type="date" class="date-input" required />
+            <button type="button" class="override-btn" data-field="dateEnd">ПРИНУД.</button>
+          </div>
+        </div>
+
+        <div class="row col-12">
+          <div class="field col-6 field-with-override">
+            <label class="label" for="responsibleName">ФИО ответственного <span class="req">*</span></label>
+            <input id="responsibleName" type="text" placeholder="Иванов Иван Иванович" required maxlength="100" />
+            <button type="button" class="override-btn" data-field="responsibleName">ПРИНУД.</button>
+            <div class="help">Полное ФИО лица, ответственного за организацию мероприятия.</div>
+          </div>
+          <div class="field col-6 field-with-override">
+            <label class="label" for="responsiblePosition">Должность ответственного <span class="req">*</span></label>
+            <input id="responsiblePosition" type="text" placeholder="" required maxlength="100" />
+            <button type="button" class="override-btn" data-field="responsiblePosition">ПРИНУД.</button>
+            <div class="help">Должность ответственного лица.</div>
+          </div>
+        </div>
+
+        <div class="row col-12">
+          <div class="field col-4 field-with-override">
+            <label class="label" for="responsiblePhone">Мобильный телефон <span class="req">*</span></label>
+            <input id="responsiblePhone" type="tel" placeholder="+7 (900) 123-45-67" required />
+            <button type="button" class="override-btn" data-field="responsiblePhone">ПРИНУД.</button>
+            <div class="help">Мобильный телефон для связи.</div>
+          </div>
+          <div class="field col-4">
+            <label class="label" for="responsibleCityPhone">Городской телефон</label>
+            <input id="responsibleCityPhone" type="tel" placeholder="(4752) 12-34-56" />
+            <div class="help">Городской телефон (опционально).</div>
+          </div>
+          <div class="field col-4">
+            <label class="label" for="responsibleAtsr">АТСР</label>
+            <input id="responsibleAtsr" type="text" placeholder="12-34" />
+            <div class="help">Номер АТСР (опционально).</div>
+          </div>
+        </div>
+
+        <div class="row col-12">
+          <div class="field col-8">
+            <label class="label" for="fileBase">Название файла при сохранении</label>
+            <input id="fileBase" type="text" placeholder="Опрос_ВУС" />
+            <div class="help">Итоговый файл будет назван как «Название + дата + время». Пример: <span
+                class="pill">Опрос_ВУС_2025-10-09_12-30-15.xlsx</span></div>
+          </div>
+          <div class="field col-4">
+            <label class="label">Шаблон Excel</label>
+            <div class="pill">Структура листа: «Лист1» с колонками, совпадающими с образцом</div>
+          </div>
+        </div>
+
+        <div class="col-12 divider"></div>
+
+        <div class="row col-12 actions">
+          <button class="btn btn-ok" id="addRowBtn">Добавить запись в таблицу</button>
+          <button class="btn btn-primary" id="downloadBtn">Скачать Excel</button>
+          <button class="btn btn-ghost" id="resetBtn">Очистить форму</button>
+        </div>
+
+        <div class="col-12" id="errorBox"></div>
+
+        <div class="col-12 override-warning">
+          <strong>⚠️ Принудительное заполнение:</strong> Кнопки "ПРИНУД." позволяют игнорировать ограничения валидации
+          для конкретного поля. При нажатии появится предупреждение о том, что вы берёте на себя ответственность за
+          корректность введённых данных. Используйте эту функцию только в исключительных случаях, когда стандартные
+          ограничения не позволяют ввести корректные данные.
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:16px;">
+      <h3 style="margin:0 0 10px 0; font-size:16px;">Текущие записи (подготовка к выгрузке)</h3>
+      <div style="overflow-x: auto; max-width: 100%;">
+        <table class="table-mini" id="previewTable" style="min-width: 1200px;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>ОКРУГ ВУЗа</th>
+              <th>ОВУ</th>
+              <th>ВУЗ</th>
+              <th>Абр.</th>
+              <th>ВУС №</th>
+              <th>Должн. №</th>
+
+              <th>Сбор</th>
+              <th>Программа</th>
+              <th>ОКРУГ сборов</th>
+              <th>Место</th>
+              <th>Преп.</th>
+              <th>Студ.</th>
+              <th>Начало</th>
+              <th>Окончание</th>
+              <th>ФИО ответств.</th>
+              <th>Должность отв.</th>
+              <th>Моб. тел.</th>
+              <th>Гор. тел.</th>
+              <th>АТСР</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="footer" id="footerInfo">Записей: 0</div>
+    </section>
+  </main>
+
+  <!-- SheetJS (xlsx) для экспорта в Excel) -->
+  <script src="{% static 'core/questionnaire/xlsx.full.min.js' %}"></script>
+  <!-- Данные справочников -->
+  <script src="{% static 'core/questionnaire/districts.js' %}"></script>
+
+  <script>
+    // Справочники данных для формы
+    const DICT = {
+      okruga: [],
+      ovu: [],
+      vuz: [],
+      sbor: [],
+      program: [],
+      locations: [],
+      vus_names: [],
+      positions: [],
+      unitToLocation: {}, // Индекс: номер части -> объект локации
+    };
+
+    // Загрузка и фильтрация справочников из DISTRICTS_DATA
+    function loadDictionaries() {
+      // Загружаем только активные записи из справочников
+      DICT.okruga = DISTRICTS_DATA.okruga.filter(item => item.active).map(item => item.name);
+      DICT.ovu = DISTRICTS_DATA.ovu.filter(item => item.active).map(item => item.name);
+      DICT.vuz = DISTRICTS_DATA.vuz.filter(item => item.active);
+      DICT.sbor = DISTRICTS_DATA.sbor.filter(item => item.active).map(item => item.name);
+      DICT.program = DISTRICTS_DATA.program.filter(item => item.active).map(item => item.name);
+      DICT.locations = DISTRICTS_DATA.locations.filter(item => item.active);
+      DICT.vus_names = DISTRICTS_DATA.vus_names ? DISTRICTS_DATA.vus_names.filter(item => item.active) : [];
+      DICT.positions = DISTRICTS_DATA.positions ? DISTRICTS_DATA.positions.filter(item => item.active) : [];
+
+      // Создаём индекс для быстрого поиска локации по номеру части
+      DICT.unitToLocation = {};
+      DICT.locations.forEach(location => {
+        if (location.unit_number) {
+          DICT.unitToLocation[location.unit_number.trim()] = location;
+        }
+      });
+
+      initializeSelects();
+    }
+    // Заполнение select элемента опциями из массива
+    function fillSelect(sel, items, getLabel = x => x, getValue = x => x) {
+      sel.innerHTML = '<option value="" disabled selected>— выберите —</option>' + items.map((item) => {
+        const label = getLabel(item);
+        const value = getValue(item);
+        return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+      }).join("");
+    }
+
+    // Утилита для получения элемента по ID
+    const $ = (id) => document.getElementById(id);
+    const okrugVuza = $("okrugVuza");
+    const ovuOtv = $("ovuOtv");
+    const vuzName = $("vuzName");
+    const abbr = $("abbr");
+    const vusNaimNo = $("vusNaimNo");
+    const posNo = $("posNo");
+    const sbor = $("sbor");
+    const program = $("program");
+    const okrugSbora = $("okrugSbora");
+    const place_num = $("place_num");
+    const place_city = $("place_city");
+    const prepods = $("prepods");
+    const students = $("students");
+    const dateStart = $("dateStart");
+    const dateEnd = $("dateEnd");
+    const responsibleName = $("responsibleName");
+    const responsiblePosition = $("responsiblePosition");
+    const responsiblePhone = $("responsiblePhone");
+    const responsibleCityPhone = $("responsibleCityPhone");
+    const responsibleAtsr = $("responsibleAtsr");
+    const fileBase = $("fileBase");
+    const errorBox = $("errorBox");
+
+    // Инициализация всех select элементов и автокомплитов
+    function initializeSelects() {
+      fillSelect(okrugVuza, DICT.okruga);
+      fillSelect(ovuOtv, DICT.ovu);
+      fillSelect(sbor, DICT.sbor);
+      fillSelect(program, DICT.program);
+      fillSelect(okrugSbora, DICT.okruga);
+      initializeAutocompletes();
+      buildKodMaps();
+      updateFieldsForProgram();
+    }
+
+    // Создание строгого автокомплита с выпадающим списком
+    // Позволяет выбирать только из предопределённого списка вариантов
+    function createStrictAutocomplete(inputId, dropdownId, options, onSelect = null) {
+      const input = document.getElementById(inputId);
+      const dropdown = document.getElementById(dropdownId);
+
+      if (!input || !dropdown) return;
+
+      let highlightedIndex = -1;
+      let filteredOptions = [...options];
+
+      // Фильтрация опций по введённому запросу
+      function filterOptions(query) {
+        if (!query.trim()) {
+          return options;
+        }
+        const lowerQuery = query.toLowerCase();
+        return options.filter(option =>
+          option.label.toLowerCase().includes(lowerQuery) ||
+          option.value.toLowerCase().includes(lowerQuery)
+        );
+      }
+
+      function showDropdown(items) {
+        if (items.length === 0) {
+          dropdown.innerHTML = '<div class="dropdown-item no-results">Совпадений не найдено</div>';
+        } else {
+          dropdown.innerHTML = items.map((item, index) =>
+            `<div class="dropdown-item" data-value="${escapeHtml(item.value)}" data-index="${index}">
+              <div style="font-weight: 500;">${escapeHtml(item.value)}</div>
+              ${item.label !== item.value ? `<div style="font-size: 11px; color: var(--muted);">${escapeHtml(item.label)}</div>` : ''}
+            </div>`
+          ).join('');
+        }
+        dropdown.classList.add('show');
+        highlightedIndex = -1;
+      }
+
+      function hideDropdown() {
+        dropdown.classList.remove('show');
+        highlightedIndex = -1;
+      }
+
+      function selectItem(value) {
+        const option = options.find(opt => opt.value === value);
+        if (option) {
+          input.value = option.value;
+          if (onSelect) onSelect(option);
+          hideDropdown();
+        }
+      }
+
+      // События
+      input.addEventListener('input', (e) => {
+        const query = e.target.value;
+        filteredOptions = filterOptions(query);
+        showDropdown(filteredOptions);
+      });
+
+      input.addEventListener('focus', () => {
+        filteredOptions = input.value.trim() ? filterOptions(input.value) : options;
+        showDropdown(filteredOptions);
+      });
+
+      input.addEventListener('click', () => {
+        if (!dropdown.classList.contains('show')) {
+          filteredOptions = input.value.trim() ? filterOptions(input.value) : options;
+          showDropdown(filteredOptions);
+        }
+      });
+
+      // Закрытие выпадающего списка при потере фокуса (с задержкой для клика)
+      input.addEventListener('blur', () => {
+        setTimeout(() => hideDropdown(), 150);
+      });
+
+      // Обработка навигации по списку с клавиатуры
+      input.addEventListener('keydown', (e) => {
+        if (!dropdown.classList.contains('show')) return;
+
+        const items = dropdown.querySelectorAll('.dropdown-item:not(.no-results)');
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          highlightedIndex = Math.min(highlightedIndex + 1, items.length - 1);
+          updateHighlight(items);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          highlightedIndex = Math.max(highlightedIndex - 1, -1);
+          updateHighlight(items);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          if (highlightedIndex >= 0 && items[highlightedIndex]) {
+            selectItem(items[highlightedIndex].dataset.value);
+          }
+        } else if (e.key === 'Escape') {
+          hideDropdown();
+        }
+      });
+
+      dropdown.addEventListener('click', (e) => {
+        const item = e.target.closest('.dropdown-item:not(.no-results)');
+        if (item) {
+          selectItem(item.dataset.value);
+        }
+      });
+
+      function updateHighlight(items) {
+        items.forEach((item, index) => {
+          item.classList.toggle('highlighted', index === highlightedIndex);
+        });
+      }
+    }
+
+    // Визуальная индикация автозаполнения поля (зелёная подсветка на 1 секунду)
+    function highlightField(field, color = '#0e4a2e') {
+      field.style.backgroundColor = color;
+      setTimeout(() => field.style.backgroundColor = '', 1000);
+    }
+
+    // Инициализация всех автокомплитов для полей формы
+    function initializeAutocompletes() {
+      const vuzOptions = DICT.vuz.map(vuz => ({
+        value: vuz.name,
+        label: `${vuz.name} (${vuz.abbr})`
+      }));
+
+      const unitOptions = Object.keys(DICT.unitToLocation).map(unit => ({
+        value: unit,
+        label: DICT.unitToLocation[unit].name
+      }));
+
+      const cityOptions = DICT.locations.map(location => ({
+        value: location.full_name,
+        label: location.name
+      }));
+
+      // Автокомплит для ВУЗов: при выборе автоматически заполняется аббревиатура
+      createStrictAutocomplete('vuzName', 'vuz_dropdown', vuzOptions, (selectedVuz) => {
+        const vuz = DICT.vuz.find(v => v.name === selectedVuz.value);
+        if (vuz) {
+          abbr.value = vuz.abbr;
+          abbr.style.borderColor = '';
+          highlightField(abbr);
+        }
+      });
+
+      // Автокомплит для номеров частей: при выборе автоматически заполняется город
+      createStrictAutocomplete('place_num', 'place_num_dropdown', unitOptions, (selectedUnit) => {
+        const location = DICT.unitToLocation[selectedUnit.value];
+        if (location) {
+          place_city.value = location.full_name;
+          place_city.style.borderColor = '';
+          place_city.title = '';
+          highlightField(place_city);
+        }
+      });
+
+      createStrictAutocomplete('place_city', 'place_city_dropdown', cityOptions);
+
+      // Автокомплит для ВУС-№ — показываем только коды нужной длины (6 для офицеров, 3 для остальных)
+      const isOfficerInit = program && program.value && program.value.toLowerCase().includes('офицер');
+      const requiredLengthInit = isOfficerInit ? 6 : 3;
+      const vusOptions = DICT.vus_names
+        .filter(v => String(v.kod).length === requiredLengthInit)
+        .map(v => ({ value: String(v.kod), label: `${String(v.kod)}` }))
+        .sort((a, b) => {
+          const an = /^\d+$/.test(a.value);
+          const bn = /^\d+$/.test(b.value);
+          if (an && bn) return Number(a.value) - Number(b.value);
+          return a.value.localeCompare(b.value);
+        });
+      // create autocomplete using filtered options
+      createStrictAutocomplete('vusNaimNo', 'vus_dropdown', vusOptions, (sel) => {
+        vusNaimNo.value = sel.value;
+        const item = DICT.vus_names.find(x => String(x.kod) === sel.value);
+        if (!item || !item.name) {
+          vusNaimNo.title = 'Наименование ВУС не найдено';
+          highlightField(vusNaimNo, '#f5a524');
+        } else {
+          vusNaimNo.title = '';
+          highlightField(vusNaimNo);
+        }
+      });
+
+      // Автокомплит для номера должности
+      const posOptions = DICT.positions.map(p => ({ value: String(p.kod), label: `${String(p.kod)}` }))
+        .sort((a, b) => {
+          const an = /^\d+$/.test(a.value);
+          const bn = /^\d+$/.test(b.value);
+          if (an && bn) return Number(a.value) - Number(b.value);
+          return a.value.localeCompare(b.value);
+        });
+      createStrictAutocomplete('posNo', 'pos_dropdown', posOptions, (sel) => {
+        posNo.value = sel.value;
+        const p = DICT.positions.find(x => String(x.kod) === sel.value);
+        if (!p || !p.name) {
+          posNo.title = 'Наименование должности не найдено';
+          highlightField(posNo, '#f5a524');
+        } else {
+          posNo.title = '';
+          highlightField(posNo);
+        }
+      });
+    }
+
+    // Карты для быстрого поиска наименований по кодам
+    let vusKodMap = new Map();
+    let positionKodMap = new Map();
+
+    // Построение карт код -> наименование для быстрого поиска
+    function buildKodMaps() {
+      vusKodMap = new Map(DICT.vus_names.map(item => [String(item.kod), item.name]));
+      positionKodMap = new Map(DICT.positions.map(item => [String(item.kod), item.name]));
+    }
+
+    // Автозаполнение наименования ВУС при вводе кода
+    vusNaimNo.addEventListener('input', () => {
+      const kod = vusNaimNo.value;
+      const isOfficer = program.value.toLowerCase().includes('офицер');
+      const requiredLength = isOfficer ? 6 : 3; // Для офицеров 6 цифр, для остальных 3
+
+      // Автозаполнение наименования ВУС отключено - поле скрыто
+    });
+
+    // Автозаполнение наименования должности при вводе кода — отключено (поле удалено)
+    // Обновление списка ВУЗов при смене округа
+    okrugVuza.addEventListener('change', () => {
+      const okr = okrugVuza.value;
+      const filteredVuz = okr ? DICT.vuz.filter(v => v.okrug === okr) : DICT.vuz;
+      const vuzOptions = filteredVuz.map(vuz => ({
+        value: vuz.name,
+        label: `${vuz.name} (${vuz.abbr})`
+      }));
+
+      // Пересоздаём автокомплит с отфильтрованными ВУЗами
+      createStrictAutocomplete('vuzName', 'vuz_dropdown', vuzOptions, (selectedVuz) => {
+        const vuz = DICT.vuz.find(v => v.name === selectedVuz.value);
+        if (vuz) {
+          abbr.value = vuz.abbr;
+          abbr.style.borderColor = '';
+          highlightField(abbr);
+        }
+      });
+
+      // Очищаем поля при смене округа
+      vuzName.value = '';
+      abbr.value = '';
+    });
+
+    // Обновление полей формы при смене программы подготовки
+    program.addEventListener('change', updateFieldsForProgram);
+
+    // Настройка полей формы в зависимости от типа программы подготовки
+    // Для офицеров: ВУС-№ = 6 цифр, должность не указывается
+    // Для не офицеров: ВУС-№ = 3 цифры, должность обязательна (3 цифры)
+    function updateFieldsForProgram() {
+      const isOfficer = program.value.toLowerCase().includes('офицер');
+      const disabledStyle = { bg: "#1a1a1a", color: "#666" };
+
+      if (isOfficer) {
+        vusNaimNo.maxLength = 6;
+        vusNaimNo.placeholder = "xxxxxx";
+        vusNaimNo.title = "Для офицеров: ровно 6 цифр";
+
+        // Блокируем поле должности (№) для офицеров
+        [posNo].forEach(field => {
+          field.value = "";
+          field.disabled = true;
+          field.style.backgroundColor = disabledStyle.bg;
+          field.style.color = disabledStyle.color;
+          field.title = "Для офицеров должность не указывается";
+          field.removeAttribute('required');
+        });
+      } else {
+        vusNaimNo.maxLength = 3;
+        vusNaimNo.placeholder = "xxx";
+        vusNaimNo.title = "Для не офицеров: ровно 3 цифры";
+
+        posNo.maxLength = 3;
+        posNo.placeholder = "xxx";
+        posNo.title = "Для не офицеров: ровно 3 цифры (обязательно)";
+        // Разблокируем поле должности (№) для не офицеров
+        posNo.maxLength = 3;
+        posNo.placeholder = "xxx";
+        posNo.title = "Для не офицеров: ровно 3 цифры (обязательно)";
+        [posNo].forEach(field => {
+          field.disabled = false;
+          field.style.backgroundColor = "";
+          field.style.color = "";
+          field.setAttribute('required', 'required');
+        });
+      }
+
+      // Очищаем поля при смене программы
+      [vusNaimNo, posNo].forEach(field => field.value = "");
+
+      // Recreate VUS autocomplete to match the required length for the selected program
+      try {
+        const requiredLength = isOfficer ? 6 : 3;
+        const newVusOptions = DICT.vus_names
+          .filter(v => String(v.kod).length === requiredLength)
+          .map(v => ({ value: String(v.kod), label: `${String(v.kod)}` }))
+          .sort((a, b) => {
+            const an = /^\d+$/.test(a.value);
+            const bn = /^\d+$/.test(b.value);
+            if (an && bn) return Number(a.value) - Number(b.value);
+            return a.value.localeCompare(b.value);
+          });
+        createStrictAutocomplete('vusNaimNo', 'vus_dropdown', newVusOptions, (sel) => {
+          vusNaimNo.value = sel.value;
+          const item = DICT.vus_names.find(x => String(x.kod) === sel.value);
+          if (!item || !item.name) {
+            vusNaimNo.title = 'Наименование ВУС не найдено';
+            highlightField(vusNaimNo, '#f5a524');
+          } else {
+            vusNaimNo.title = '';
+            highlightField(vusNaimNo);
+          }
+        });
+      } catch (e) {
+        console.warn('Не удалось пересоздать автокомплит VUS:', e);
+      }
+    }
+
+    // Автоформатирование полей при вводе
+    // Аббревиатура: только заглавные буквы, цифры и дефис (кроме принудительных)
+    abbr.addEventListener('input', () => {
+      if (!overriddenFields.has('abbr')) {
+        abbr.value = abbr.value.replace(/\s+/g, '').toUpperCase().replace(/[^A-ZА-Я0-9\-]/g, '');
+      }
+    });
+
+    // ВУС-№: только цифры, ограничение по maxLength (кроме принудительных)
+    vusNaimNo.addEventListener('input', () => {
+      if (!overriddenFields.has('vusNaimNo')) {
+        vusNaimNo.value = vusNaimNo.value.replace(/\D/g, '').slice(0, vusNaimNo.maxLength);
+      }
+    });
+
+    // Должность-№: только цифры, если поле не заблокировано и не принудительное
+    posNo.addEventListener('input', () => {
+      if (!posNo.disabled && !overriddenFields.has('posNo')) {
+        posNo.value = posNo.value.replace(/\D/g, '').slice(0, posNo.maxLength || 3);
+      }
+    });
+
+    // Приведение строки к правильному регистру (Title Case) для русского языка
+    // Союзы и предлоги остаются строчными, кроме первого слова
+    function toTitleCaseRu(str) {
+      if (!str) return '';
+      const LOWER = new Set(['в', 'на', 'по', 'и', 'для', 'с', 'со', 'у', 'о', 'об', 'обо', 'от', 'над', 'под']);
+      return str
+        .trim()
+        .replace(/\s+/g, ' ')
+        .toLowerCase()
+        .split(' ')
+        .map((w, i) => {
+          if (i > 0 && LOWER.has(w)) return w; // Союзы и предлоги строчными
+          return w.charAt(0).toUpperCase() + w.slice(1);
+        })
+        .join(' ');
+    }
+
+    // Автоформатирование ФИО и должности: приведение к правильному регистру
+    [responsibleName, responsiblePosition].forEach(field => {
+      field.addEventListener('blur', () => {
+        field.value = toTitleCaseRu(field.value.trim().replace(/\s+/g, ' '));
+      });
+    });
+
+    // Автоформатирование мобильного телефона: +7 (XXX) XXX-XX-XX
+    responsiblePhone.addEventListener('input', () => {
+      let digits = responsiblePhone.value.replace(/\D/g, '');
+      if (digits.startsWith('8')) digits = '7' + digits.substring(1);
+      if (digits.length > 0 && !digits.startsWith('7')) digits = '7' + digits.slice(0, 10);
+      digits = digits.slice(0, 11);
+
+      let formatted = '';
+      if (digits.length > 0) {
+        formatted = '+' + digits[0];
+        if (digits.length > 1) formatted += ' (' + digits.slice(1, 4);
+        if (digits.length >= 4) formatted += digits.length > 4 ? ') ' + digits.slice(4, 7) : ') ';
+        if (digits.length > 7) formatted += '-' + digits.slice(7, 9);
+        if (digits.length > 9) formatted += '-' + digits.slice(9, 11);
+      }
+      responsiblePhone.value = formatted;
+    });
+
+    // Автоформатирование городского телефона: (XXXX) XXX-XX-XX
+    responsibleCityPhone.addEventListener('input', () => {
+      let digits = responsibleCityPhone.value.replace(/\D/g, '').slice(0, 11);
+      if (!digits) { responsibleCityPhone.value = ''; return; }
+
+      const codeLen = digits.length === 11 ? 4 : digits.length >= 10 ? 3 : Math.min(4, digits.length);
+      const local = digits.slice(codeLen);
+      let formatted = '(' + digits.slice(0, codeLen);
+
+      if (local.length > 0) formatted += ') ';
+      if (local.length <= 3) formatted += local;
+      else if (local.length <= 5) formatted += local.slice(0, 3) + '-' + local.slice(3);
+      else formatted += local.slice(0, 3) + '-' + local.slice(3, 5) + (local.length > 5 ? '-' + local.slice(5, 7) : '');
+
+      responsibleCityPhone.value = formatted;
+    });
+
+    // Запрет ввода латиницы в поле должности ответственного (кроме принудительно заполненных)
+    [responsiblePosition].forEach(field => {
+      field.addEventListener('input', () => {
+        if (!overriddenFields.has(field.id)) {
+          field.value = field.value.replace(/[A-Za-z]/g, '');
+        }
+      });
+    });
+
+    // Валидация числовых полей: только положительные числа (кроме принудительных)
+    [prepods, students].forEach(el => {
+      el.addEventListener('input', () => {
+        if (!overriddenFields.has(el.id)) {
+          const v = String(el.value || '').replace(/\D/g, '');
+          el.value = v === '' ? '' : String(Number(v));
+        }
+        checkLimitsAndHighlight();
+      });
+    });
+
+    // Автоформатирование АТСР: XX-XX
+    responsibleAtsr.addEventListener('input', () => {
+      let value = responsibleAtsr.value.replace(/\D/g, '');
+      if (value.length > 0) {
+        let formatted = value.substring(0, Math.min(value.length, 2));
+        if (value.length > 2) formatted += '-' + value.substring(2, 4);
+        responsibleAtsr.value = formatted;
+      }
+    });
+    // Объект для отслеживания полей, заполненных принудительно
+    const overriddenFields = new Set();
+
+    // Функция для показа диалога подтверждения принудительного заполнения
+    function showOverrideConfirmation(fieldId, fieldName) {
+      const message = `Вы хотите включить принудительное заполнение для поля "${fieldName}"?\n\n` +
+        `⚠️ ВНИМАНИЕ: Вы берёте на себя полную ответственность за корректность введённых данных.\n\n` +
+        `При принудительном заполнении:\n` +
+        `• Игнорируются все ограничения валидации\n` +
+        `• Поле можно заполнить любыми данными\n` +
+        `• Ответственность за корректность данных лежит на вас\n\n` +
+        `Продолжить?`;
+
+      return confirm(message);
+    }
+
+    // Функция для включения принудительного режима для поля
+    function enableFieldOverride(fieldId) {
+      const field = document.getElementById(fieldId);
+      const fieldContainer = field.closest('.field');
+
+      if (!field || !fieldContainer) return;
+
+      // Для поля dateEnd также включаем dateStart
+      if (fieldId === 'dateEnd') {
+        overriddenFields.add('dateStart');
+        overriddenFields.add('dateEnd');
+
+        // Применяем стили к обоим полям дат
+        const dateStart = document.getElementById('dateStart');
+        if (dateStart) {
+          dateStart.classList.add('field-overridden');
+          dateStart.removeAttribute('required');
+          dateStart.style.borderColor = '';
+          dateStart.title = '';
+        }
+      } else {
+        // Добавляем в список принудительно заполненных
+        overriddenFields.add(fieldId);
+      }
+
+      // Визуальное оформление
+      field.classList.add('field-overridden');
+      field.removeAttribute('required');
+      field.removeAttribute('readonly');
+      field.removeAttribute('disabled');
+
+      // Специальная обработка для select и автокомплитов
+      if (field.tagName === 'SELECT') {
+        // Для select создаем текстовое поле
+        const textInput = document.createElement('input');
+        textInput.type = 'text';
+        textInput.id = fieldId + '_override';
+        textInput.className = field.className + ' field-overridden';
+        textInput.placeholder = 'Введите любое значение...';
+        textInput.style.display = 'block';
+
+        // Скрываем оригинальный select
+        field.style.display = 'none';
+        field.parentNode.insertBefore(textInput, field.nextSibling);
+      } else if (fieldContainer.querySelector('.strict-autocomplete')) {
+        // Для автокомплитов отключаем выпадающий список
+        const dropdown = fieldContainer.querySelector('.dropdown');
+        if (dropdown) {
+          dropdown.style.display = 'none';
+        }
+      }
+
+      // Добавляем индикатор
+      let indicator = fieldContainer.querySelector('.override-indicator');
+      if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.className = 'override-indicator';
+        indicator.textContent = fieldId === 'dateEnd' ?
+          '⚠️ Принудительное заполнение дат активно' :
+          '⚠️ Принудительное заполнение активно';
+
+        // Вставляем после поля, но перед help текстом
+        const helpDiv = fieldContainer.querySelector('.help');
+        if (helpDiv) {
+          fieldContainer.insertBefore(indicator, helpDiv);
+        } else {
+          fieldContainer.appendChild(indicator);
+        }
+      }
+
+      // Убираем ошибки валидации
+      field.style.borderColor = '';
+      field.title = '';
+
+      // Сохраняем и убираем ограничения для полей с maxLength
+      if (field.hasAttribute('maxlength')) {
+        field.dataset.originalMaxLength = field.getAttribute('maxlength');
+        field.removeAttribute('maxlength');
+      }
+
+      // Делаем поле доступным для редактирования
+      if (fieldId === 'abbr') {
+        field.removeAttribute('readonly');
+      }
+    }
+
+    // Функция для отключения принудительного режима
+    function disableFieldOverride(fieldId) {
+      const field = document.getElementById(fieldId);
+      const fieldContainer = field.closest('.field');
+
+      if (!field || !fieldContainer) return;
+
+      // Для поля dateEnd также отключаем dateStart
+      if (fieldId === 'dateEnd') {
+        overriddenFields.delete('dateStart');
+        overriddenFields.delete('dateEnd');
+
+        // Убираем стили с обоих полей дат
+        const dateStart = document.getElementById('dateStart');
+        if (dateStart) {
+          dateStart.classList.remove('field-overridden');
+          dateStart.setAttribute('required', 'required');
+          dateStart.style.borderColor = '';
+          dateStart.title = '';
+        }
+      } else {
+        // Удаляем из списка
+        overriddenFields.delete(fieldId);
+      }
+
+      // Специальная обработка для select и автокомплитов
+      if (field.tagName === 'SELECT') {
+        // Восстанавливаем select
+        const overrideInput = document.getElementById(fieldId + '_override');
+        if (overrideInput) {
+          overrideInput.remove();
+        }
+        field.style.display = 'block';
+      } else if (fieldContainer.querySelector('.strict-autocomplete')) {
+        // Для автокомплитов восстанавливаем выпадающий список
+        const dropdown = fieldContainer.querySelector('.dropdown');
+        if (dropdown) {
+          dropdown.style.display = '';
+        }
+      }
+
+      // Убираем визуальное оформление
+      field.classList.remove('field-overridden');
+
+      // Восстанавливаем требования
+      if (field.hasAttribute('data-originally-required') || field.hasAttribute('required')) {
+        field.setAttribute('required', 'required');
+      }
+
+      // Убираем индикатор
+      const indicator = fieldContainer.querySelector('.override-indicator');
+      if (indicator) {
+        indicator.remove();
+      }
+
+      // Восстанавливаем maxLength если он был сохранен
+      if (field.dataset.originalMaxLength) {
+        field.setAttribute('maxlength', field.dataset.originalMaxLength);
+        delete field.dataset.originalMaxLength;
+      }
+
+      // Восстанавливаем readonly для аббревиатуры
+      if (fieldId === 'abbr') {
+        field.setAttribute('readonly', 'readonly');
+      }
+    }
+
+    // Обработчик кликов по кнопкам принудительного заполнения
+    document.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('override-btn')) return;
+
+      const fieldId = e.target.dataset.field;
+      const field = document.getElementById(fieldId);
+
+      if (!field) return;
+
+      // Получаем название поля из label
+      const fieldContainer = field.closest('.field');
+      const label = fieldContainer?.querySelector('.label');
+      const fieldName = label ? label.textContent.replace('*', '').trim() : fieldId;
+
+      if (overriddenFields.has(fieldId)) {
+        // Отключаем принудительный режим
+        if (confirm(`Отключить принудительное заполнение для поля "${fieldName}"?`)) {
+          disableFieldOverride(fieldId);
+          e.target.textContent = 'ПРИНУД.';
+          e.target.style.background = 'linear-gradient(180deg, #d4843a, #b8732f)';
+        }
+      } else {
+        // Включаем принудительный режим
+        if (showOverrideConfirmation(fieldId, fieldName)) {
+          enableFieldOverride(fieldId);
+          e.target.textContent = 'ОТКЛ.';
+          e.target.style.background = 'linear-gradient(180deg, #c7523a, #b04532)';
+
+          // Фокусируемся на поле для удобства
+          field.focus();
+        }
+      }
+    });
+
+    // Массив записей для экспорта в Excel
+    const rows = [];
+    const previewBody = document.querySelector('#previewTable tbody');
+    const footerInfo = document.querySelector('#footerInfo');
+
+    // Отображение всех записей в таблице предпросмотра
+    function renderPreview() {
+      previewBody.innerHTML = rows.map((r, idx) => `
+        <tr>
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(r['ОКРУГ ВУЗа'])}</td>
+          <td>${escapeHtml(r['ОВУ, отв. за подготовку'])}</td>
+          <td>${escapeHtml(r['Наименование ВУЗа'])}</td>
+          <td>${escapeHtml(r['Абривеатура'])}</td>
+          <td>${escapeHtml(r['ВУС'])}</td>
+          <td>${escapeHtml(r['Должность'])}</td>
+          <td>${escapeHtml(r['Сбор/стажировка'])}</td>
+          <td>${escapeHtml(r['Программа подготовки'])}</td>
+          <td>${escapeHtml(r['ОКРУГ проведения сборов'])}</td>
+          <td>${escapeHtml(r['Место проведения учебного сбора'])}</td>
+          <td>${escapeHtml(String(r['Планируется (чел.)']))}</td>
+          <td>${escapeHtml(String(r['Unnamed: 13']))}</td>
+          <td>${fmtDate(r['Срок проведения'])}</td>
+          <td>${fmtDate(r['Unnamed: 15'])}</td>
+          <td>${escapeHtml(r['ФИО ответственного'])}</td>
+          <td>${escapeHtml(r['Должность ответственного'])}</td>
+          <td>${escapeHtml(r['Мобильный телефон'])}</td>
+          <td>${escapeHtml(r['Городской телефон'])}</td>
+          <td>${escapeHtml(r['АТСР'])}</td>
+
+          <td>
+            <button
+              class="btn btn-warn btn-mini"
+              data-action="delete"
+              data-index="${idx}"
+            >
+              Удалить
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      footerInfo.textContent = `Записей: ${rows.length}`;
+    }
+
+    previewBody.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action="delete"]');
+      if (!btn) return;
+
+      const idx = Number(btn.dataset.index);
+      if (Number.isNaN(idx) || !confirm(`Удалить запись #${idx + 1}?`)) return;
+
+      rows.splice(idx, 1);
+      renderPreview();
+    });
+
+    // Форматирование даты в формат YYYY-MM-DD
+    function fmtDate(d) {
+      if (!d) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const da = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${da}`;
+    }
+
+    // Валидация всех полей формы перед добавлением записи
+    function validateForm() {
+      errorBox.innerHTML = '';
+      const errs = [];
+
+      // Функция для проверки, принудительно ли заполнено поле
+      const isOverridden = (fieldId) => overriddenFields.has(fieldId);
+
+      if (!okrugVuza.value && !isOverridden('okrugVuza')) errs.push('Выберите «ОКРУГ ВУЗа».');
+      if (!ovuOtv.value && !isOverridden('ovuOtv')) errs.push('Выберите «ОВУ, отв. за подготовку».');
+      if (!vuzName.value && !isOverridden('vuzName')) {
+        errs.push('Заполните «Наименование ВУЗа».');
+      } else if (vuzName.value && !isOverridden('vuzName')) {
+        const validVuz = DICT.vuz.map(v => v.name);
+        if (!validVuz.includes(vuzName.value.trim())) {
+          errs.push('ВУЗ должен быть выбран из списка предложенных вариантов.');
+          vuzName.style.borderColor = 'var(--err)';
+        } else {
+          vuzName.style.borderColor = '';
+        }
+      } else if (isOverridden('vuzName')) {
+        vuzName.style.borderColor = '';
+      }
+      const isOfficer = program.value.toLowerCase().includes('офицер');
+
+      if (isOfficer) {
+        if (!/^\d{6}$/.test(vusNaimNo.value) && !isOverridden('vusNaimNo')) {
+          errs.push('Для офицеров поле «ВУС-№» должно содержать ровно 6 цифр.');
+          vusNaimNo.style.borderColor = 'var(--err)';
+        } else {
+          vusNaimNo.style.borderColor = '';
+        }
+        if (posNo.value.trim() !== '' && !isOverridden('posNo')) {
+          errs.push('Для офицеров поле «Должность-№» должно быть пустым.');
+          posNo.style.borderColor = 'var(--err)';
+        } else {
+          posNo.style.borderColor = '';
+        }
+      } else {
+        if (!/^\d{3}$/.test(vusNaimNo.value) && !isOverridden('vusNaimNo')) {
+          errs.push('Для не офицеров поле «ВУС-№» должно содержать ровно 3 цифры.');
+          vusNaimNo.style.borderColor = 'var(--err)';
+        } else {
+          vusNaimNo.style.borderColor = '';
+        }
+        if (!/^\d{3}$/.test(posNo.value) && !isOverridden('posNo')) {
+          errs.push('Для не офицеров поле «Должность-№» должно содержать ровно 3 цифры.');
+          posNo.style.borderColor = 'var(--err)';
+        } else {
+          posNo.style.borderColor = '';
+        }
+      }
+      if (!sbor.value && !isOverridden('sbor')) errs.push('Выберите «Сбор/стажировка».');
+      if (!program.value && !isOverridden('program')) errs.push('Выберите «Программа подготовки».');
+      if (!okrugSbora.value && !isOverridden('okrugSbora')) errs.push('Выберите «ОКРУГ проведения сборов».');
+
+      if (place_num.value.trim() && !isOverridden('place_num')) {
+        const validUnits = Object.keys(DICT.unitToLocation);
+        if (!validUnits.includes(place_num.value.trim())) {
+          errs.push('Номер части должен быть выбран из списка предложенных вариантов.');
+          place_num.style.borderColor = 'var(--err)';
+        } else {
+          place_num.style.borderColor = '';
+        }
+      } else if (isOverridden('place_num')) {
+        place_num.style.borderColor = '';
+      }
+
+      if (!place_city.value && !isOverridden('place_city')) {
+        errs.push('Заполните «Город проведения учебного сбора».');
+      } else if (place_city.value && !isOverridden('place_city')) {
+        const validCities = DICT.locations.map(loc => loc.full_name);
+        if (!validCities.includes(place_city.value.trim())) {
+          errs.push('Город должен быть выбран из списка предложенных вариантов.');
+          place_city.style.borderColor = 'var(--err)';
+        } else {
+          place_city.style.borderColor = '';
+        }
+      } else if (isOverridden('place_city')) {
+        place_city.style.borderColor = '';
+      }
+      if (!isOverridden('prepods') && (prepods.value === '' || Number(prepods.value) < 0)) errs.push('Поле «Преподавателей» должно быть ≥ 0.');
+      if (!isOverridden('students') && (students.value === '' || Number(students.value) < 0)) errs.push('Поле «Студентов» должно быть ≥ 0.');
+      if (!isOverridden('prepods') && Number(prepods.value) > 100) errs.push('Поле «Преподавателей» не может быть больше 100.');
+      if (!isOverridden('students') && Number(students.value) > 1000) errs.push('Поле «Студентов» не может быть больше 1000.');
+      if (!responsibleName.value.trim() && !isOverridden('responsibleName')) {
+        errs.push('Заполните «ФИО ответственного».');
+      } else if (responsibleName.value.trim() && !isOverridden('responsibleName')) {
+        const clean = responsibleName.value.trim().replace(/\s+/g, ' ');
+        const parts = clean.split(' ');
+        if (parts.length < 2) {
+          errs.push('ФИО должно содержать как минимум фамилию и имя (минимум 2 слова).');
+          responsibleName.style.borderColor = 'var(--err)';
+        } else if (responsibleName.value.length > 100) {
+          errs.push('«ФИО ответственного» не может превышать 100 символов.');
+          responsibleName.style.borderColor = 'var(--err)';
+        } else if (!/^[А-ЯЁа-яё\s-]+$/.test(clean)) {
+          errs.push('ФИО должно содержать только русские буквы, пробелы и дефисы.');
+          responsibleName.style.borderColor = 'var(--err)';
+        } else {
+          responsibleName.style.borderColor = '';
+        }
+      } else if (isOverridden('responsibleName')) {
+        responsibleName.style.borderColor = '';
+      }
+
+      if (!responsiblePosition.value.trim() && !isOverridden('responsiblePosition')) {
+        errs.push('Заполните «Должность ответственного».');
+        responsiblePosition.style.borderColor = 'var(--err)';
+      } else if (responsiblePosition.value.trim() && !isOverridden('responsiblePosition') && !/^[А-ЯЁа-яё0-9\s.,()"-]+$/i.test(responsiblePosition.value.trim())) {
+        errs.push('«Должность ответственного» содержит недопустимые символы.');
+        responsiblePosition.style.borderColor = 'var(--err)';
+      } else {
+        responsiblePosition.style.borderColor = '';
+      }
+
+      if (!responsiblePhone.value.trim() && !isOverridden('responsiblePhone')) {
+        errs.push('Заполните «Мобильный телефон».');
+      } else if (responsiblePhone.value.trim() && !isOverridden('responsiblePhone') && responsiblePhone.value.replace(/\D/g, '').length < 11) {
+        errs.push('Введите корректный мобильный телефон (11 цифр).');
+        responsiblePhone.style.borderColor = 'var(--err)';
+      } else {
+        responsiblePhone.style.borderColor = '';
+      }
+
+      if (responsibleCityPhone.value.trim()) {
+        const cityPhoneDigits = responsibleCityPhone.value.replace(/\D/g, '');
+        if (cityPhoneDigits.length < 10 || cityPhoneDigits.length > 11) {
+          errs.push('Введите корректный городской телефон (10 или 11 цифр с кодом города).');
+          responsibleCityPhone.style.borderColor = 'var(--err)';
+        } else {
+          responsibleCityPhone.style.borderColor = '';
+        }
+      } else {
+        responsibleCityPhone.style.borderColor = '';
+      }
+
+      if (responsibleAtsr.value.trim()) {
+        if (!/^\d{1,3}-\d{1,3}$/.test(responsibleAtsr.value.trim())) {
+          errs.push('АТСР должен быть в формате XX-XX (например: 12-34).');
+          responsibleAtsr.style.borderColor = 'var(--err)';
+        } else {
+          responsibleAtsr.style.borderColor = '';
+        }
+      } else {
+        responsibleAtsr.style.borderColor = '';
+      }
+
+      if (!dateStart.value && !isOverridden('dateStart')) errs.push('Укажите «Начало».');
+      if (!dateEnd.value && !isOverridden('dateEnd')) errs.push('Укажите «Окончание».');
+
+      // Валидация длительности только если оба поля заполнены и не в принудительном режиме
+      const datesOverridden = isOverridden('dateStart') || isOverridden('dateEnd');
+      if (dateStart.value && dateEnd.value && !datesOverridden) {
+        const ds = new Date(dateStart.value); const de = new Date(dateEnd.value);
+        if (de < ds) {
+          errs.push('«Окончание» не может быть раньше «Начала».');
+        } else {
+          const diffTime = Math.abs(de - ds);
+          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+          const sborType = sbor.value.toLowerCase();
+          const dateFields = [dateStart, dateEnd];
+
+          if (sborType.includes('сбор') && diffDays < 15) {
+            errs.push('Сборы должны длиться не менее 15 дней.');
+            dateFields.forEach(f => f.style.borderColor = 'var(--err)');
+          } else if (sborType.includes('стажировка') && diffDays < 30) {
+            errs.push('Стажировка должна длиться не менее 30 дней.');
+            dateFields.forEach(f => f.style.borderColor = 'var(--err)');
+          } else {
+            dateFields.forEach(f => f.style.borderColor = '');
+          }
+        }
+      } else if (datesOverridden) {
+        // Убираем ошибки границ для принудительно заполненных полей
+        [dateStart, dateEnd].forEach(f => f.style.borderColor = '');
+      }
+      if (errs.length) {
+        errorBox.innerHTML = errs.map(e => `<div class='error'>• ${escapeHtml(e)}</div>`).join('');
+        return false;
+      }
+      return true;
+    }
+
+    // Функция для получения значения поля с учетом принудительного заполнения
+    function getFieldValue(fieldId) {
+      const field = document.getElementById(fieldId);
+      const overrideInput = document.getElementById(fieldId + '_override');
+
+      // Если есть принудительное поле ввода, используем его значение
+      if (overrideInput && overrideInput.style.display !== 'none') {
+        return overrideInput.value;
+      }
+
+      // Иначе используем значение оригинального поля
+      return field ? field.value : '';
+    }
+
+    // Построение объекта записи из данных формы для экспорта в Excel
+    function buildRowFromForm() {
+      const pn = getFieldValue('place_num').trim();
+      const pc = getFieldValue('place_city').trim();
+
+      const placeParts = [];
+      if (pn) placeParts.push(pn);
+      if (pc) placeParts.push(toTitleCaseRu(pc));
+
+      return {
+        'ОКРУГ ВУЗа': getFieldValue('okrugVuza'),
+        'ОВУ, отв. за подготовку': getFieldValue('ovuOtv'),
+        'Наименование ВУЗа': getFieldValue('vuzName'),
+        'Абривеатура': getFieldValue('abbr'),
+        'ВУС': getFieldValue('vusNaimNo'),
+        'Unnamed: 5': '', // Пустая колонка для Excel (наименование ВУС)
+        'Должность': getFieldValue('posNo'),
+        'Unnamed: 6': '', // Пустая колонка для Excel (наименование должности)
+        'Сбор/стажировка': getFieldValue('sbor'),
+        'Программа подготовки': getFieldValue('program'),
+        'ОКРУГ проведения сборов': getFieldValue('okrugSbora'),
+        'Место проведения учебного сбора': placeParts.join(', '),
+        'Планируется (чел.)': Number(getFieldValue('prepods')),
+        'Unnamed: 13': Number(getFieldValue('students')),
+        'Срок проведения': new Date(getFieldValue('dateStart')),
+        'Unnamed: 15': new Date(getFieldValue('dateEnd')),
+        'ФИО ответственного': getFieldValue('responsibleName').trim(),
+        'Должность ответственного': getFieldValue('responsiblePosition').trim(),
+        'Мобильный телефон': getFieldValue('responsiblePhone').trim(),
+        'Городской телефон': getFieldValue('responsibleCityPhone').trim(),
+        'АТСР': getFieldValue('responsibleAtsr').trim(),
+      };
+    }
+    // Добавление записи в таблицу после валидации
+    $("addRowBtn").addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!validateForm()) return;
+      rows.push(buildRowFromForm());
+      renderPreview();
+    });
+
+    // Очистка всех полей формы
+    $("resetBtn").addEventListener('click', (e) => {
+      e.preventDefault();
+
+      // Сбрасываем все принудительные режимы
+      const fieldsToReset = Array.from(overriddenFields);
+      fieldsToReset.forEach(fieldId => {
+        disableFieldOverride(fieldId);
+        const btn = document.querySelector(`[data-field="${fieldId}"]`);
+        if (btn) {
+          btn.textContent = 'ПРИНУД.';
+          btn.style.background = 'linear-gradient(180deg, #d4843a, #b8732f)';
+        }
+      });
+
+      document.querySelector('form')?.reset();
+      const fieldsToClear = [abbr, vuzName, vusNaimNo, posNo, place_num, place_city, prepods, students, dateStart, dateEnd, responsibleName, responsiblePosition, responsiblePhone, responsibleCityPhone, responsibleAtsr];
+      fieldsToClear.forEach(el => el.value = '');
+      document.querySelectorAll('.strict-autocomplete .dropdown').forEach(d => d.classList.remove('show'));
+      [okrugVuza, ovuOtv, sbor, program, okrugSbora].forEach(sel => sel.selectedIndex = 0);
+      updateFieldsForProgram();
+      prepods.value = 0;
+      students.value = 0;
+      errorBox.innerHTML = '';
+    });
+
+    // Экспорт всех записей в Excel файл
+    $("downloadBtn").addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!rows.length) {
+        errorBox.innerHTML = `<div class='error'>• Нет записей для экспорта. Нажмите «Добавить запись в таблицу».</div>`;
+        return;
+      }
+      try {
+        if (typeof XLSX === 'undefined') {
+          errorBox.innerHTML = `<div class='error'>• Ошибка: библиотека XLSX не загружена. Проверьте наличие файла xlsx.full.min.js</div>`;
+          return;
+        }
+        downloadExcel();
+      } catch (error) {
+        errorBox.innerHTML = `<div class='error'>• Ошибка при экспорте: ${error.message}</div>`;
+        console.error('Ошибка экспорта Excel:', error);
+      }
+    });
+
+    // Применение стилей к ячейкам Excel: серый фон для заголовков, зелёный для данных
+    function styleSheet(ws) {
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      const borderStyle = {
+        top: { style: "thin", color: { rgb: "000000" } },
+        bottom: { style: "thin", color: { rgb: "000000" } },
+        left: { style: "thin", color: { rgb: "000000" } },
+        right: { style: "thin", color: { rgb: "000000" } }
+      };
+
+      for (let R = 0; R <= range.e.r; ++R) {
+        for (let C = 0; C <= range.e.c; ++C) {
+          const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+          if (!cell) continue;
+          cell.s = {
+            fill: { fgColor: { rgb: R <= 2 ? "D9D9D9" : "DFFFD9" } }, // Первые 3 строки - серые, остальные - зелёные
+            border: borderStyle
+          };
+        }
+      }
+    }
+
+    // Генерация и скачивание Excel файла с данными формы
+    function downloadExcel() {
+      try {
+        const headerRow1 = [
+          'ОКРУГ ВУЗа',
+          'ОВУ, отв. за подготовку',
+          'Наименование ВУЗа',
+          'Аббревиатура',
+
+          'ВУС', '',
+          'Должность', '',
+
+          'Сбор/стажировка',
+          'Программа подготовки',
+          'ОКРУГ проведения сборов',
+          'Место проведения учебного сбора',
+
+          'Планируется (чел.)', '',
+          'Срок проведения', '',
+          'ФИО ответственного',
+          'Должность ответственного',
+          'Мобильный телефон',
+          'Городской телефон',
+          'АТСР'
+        ];
+
+        const headerRow2 = [
+          '1', '2', '3', '4',
+          '№', 'Наименование',
+          '№', 'Наименование',
+          '9', '10', '11', '12',
+          'преподавателей', 'студентов',
+          'начало', 'окончание',
+          '17', '18', '19', '20', '21'
+        ];
+
+        const headerRow3 = [
+          '1', '2', '3', '4',
+          '5', '6',
+          '7', '8',
+          '9', '10',
+          '11', '12', '13', '14',
+          '15', '16', '17', '18', '19', '20', '21'
+        ];
+
+        const HEADER_ORDER = [
+          'ОКРУГ ВУЗа',
+          'ОВУ, отв. за подготовку',
+          'Наименование ВУЗа',
+          'Аббревиатура',
+          'ВУС',
+          'Unnamed: 5',
+          'Должность',
+          'Unnamed: 6',
+          'Сбор/стажировка',
+          'Программа подготовки',
+          'ОКРУГ проведения сборов',
+          'Место проведения учебного сбора',
+          'Планируется (чел.)',
+          'Unnamed: 13',
+          'Срок проведения',
+          'Unnamed: 15',
+          'ФИО ответственного',
+          'Должность ответственного',
+          'Мобильный телефон',
+          'Городской телефон',
+          'АТСР',
+        ];
+
+        const tableRows = rows.map(r => HEADER_ORDER.map(k => {
+          const value = r[k];
+          // Обработка undefined и null значений
+          if (value === undefined || value === null) return '';
+          // Обработка дат
+          if (value instanceof Date) {
+            if (isNaN(value.getTime())) return '';
+            return value;
+          }
+          return value;
+        }));
+
+        const wsData = [
+          headerRow1,
+          headerRow2,
+          headerRow3,
+          ...tableRows
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+        // Проверка, что лист создан успешно
+        if (!ws || !ws['!ref']) {
+          throw new Error('Не удалось создать лист Excel');
+        }
+
+        // Установка формата дат без времени
+        for (const cellAddress in ws) {
+          if (!ws.hasOwnProperty(cellAddress)) continue;
+          const cell = ws[cellAddress];
+          if (cell && cell.t === 'n' && cell.z && cell.z.includes('AM/PM')) {
+            cell.z = 'yyyy-mm-dd';
+          }
+        }
+
+        // Гарантированное удаление времени из дат в колонках 13 и 14 (после удаления колонки наименования должности)
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        const dateCols = [14, 15]; // Колонки с датами начала и окончания (0-based) — сдвинуты после вставки колонки для наименования должности
+        for (const C of dateCols) {
+          for (let R = 3; R <= range.e.r; R++) {
+            const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
+            if (cell && cell.t === 'n') {
+              cell.v = Math.floor(cell.v); // Убираем дробную часть (время)
+              cell.z = 'yyyy-mm-dd';
+            }
+          }
+        }
+
+        ws['!merges'] = [
+          { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
+          { s: { r: 0, c: 1 }, e: { r: 1, c: 1 } },
+          { s: { r: 0, c: 2 }, e: { r: 1, c: 2 } },
+          { s: { r: 0, c: 3 }, e: { r: 1, c: 3 } },
+          // Сдвинутые одиночные колонки после вставки дополнительной колонки для наименования должности
+          { s: { r: 0, c: 8 }, e: { r: 1, c: 8 } },
+          { s: { r: 0, c: 9 }, e: { r: 1, c: 9 } },
+          { s: { r: 0, c: 10 }, e: { r: 1, c: 10 } },
+          { s: { r: 0, c: 11 }, e: { r: 1, c: 11 } },
+          { s: { r: 0, c: 16 }, e: { r: 1, c: 16 } },
+          { s: { r: 0, c: 17 }, e: { r: 1, c: 17 } },
+          { s: { r: 0, c: 18 }, e: { r: 1, c: 18 } },
+          { s: { r: 0, c: 19 }, e: { r: 1, c: 19 } },
+          { s: { r: 0, c: 20 }, e: { r: 1, c: 20 } },
+          // Мердж для ВУС (колонки 4-5) остаётся
+          { s: { r: 0, c: 4 }, e: { r: 0, c: 5 } },
+          // Добавляем мердж для Должности (колонки 6-7)
+          { s: { r: 0, c: 6 }, e: { r: 0, c: 7 } },
+          // Мерджи для больших блоков (сдвинуты на +1)
+          { s: { r: 0, c: 13 }, e: { r: 0, c: 14 } },
+          { s: { r: 0, c: 14 }, e: { r: 0, c: 15 } },
+        ];
+
+        styleSheet(ws);
+
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Лист1');
+
+        const now = new Date();
+        const stamp = now.toISOString().replace('T', '_').slice(0, 19).replace(/:/g, '-');
+        const base = fileBase.value?.trim() || 'Опрос_ВУС';
+
+        XLSX.writeFile(wb, `${base}_${stamp}.xlsx`, { cellStyles: true });
+      } catch (error) {
+        console.error('Ошибка в downloadExcel:', error);
+        throw error;
+      }
+    }
+
+    // Экранирование HTML для безопасного вывода в DOM
+    function escapeHtml(str) {
+      return (str == null ? '' : String(str)).replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', '\'': '&#39;'
+      }[s]));
+    }
+
+    // Удаление ведущих нулей из числовых полей
+    // allowSingleZero: если true, то "0" разрешён, но "01" -> "1"
+    function removeLeadingZeros(selector, { allowSingleZero = false } = {}) {
+      document.querySelectorAll(selector).forEach(input => {
+        const normalize = () => {
+          input.value = input.value.replace(allowSingleZero ? /^0+(?=\d)/ : /^0+/, '');
+        };
+        input.addEventListener('input', normalize);
+        normalize();
+      });
+    }
+
+    removeLeadingZeros('#place_num', { allowSingleZero: false });
+    removeLeadingZeros('#vusNaimNo', { allowSingleZero: true });
+    removeLeadingZeros('#posNo', { allowSingleZero: true });
+    removeLeadingZeros('#prepods', { allowSingleZero: true });
+    removeLeadingZeros('#students', { allowSingleZero: true });
+
+    // Проверка лимитов для полей преподавателей и студентов с визуальной индикацией
+    function checkLimitsAndHighlight() {
+      const limits = [
+        { field: prepods, value: Number(prepods.value), max: 100, msg: 'Превышен лимит: максимум 100 преподавателей' },
+        { field: students, value: Number(students.value), max: 1000, msg: 'Превышен лимит: максимум 1000 студентов' }
+      ];
+
+      limits.forEach(({ field, value, max, msg }) => {
+        if (value > max) {
+          field.style.borderColor = 'var(--err)';
+          field.title = msg;
+        } else {
+          field.style.borderColor = '';
+          field.title = '';
+        }
+      });
+    }
+
+    // Проверка длительности сборов/стажировок с визуальной индикацией
+    // Сборы: минимум 15 дней, стажировка: минимум 30 дней
+    function checkDurationAndHighlight() {
+      const dateFields = [dateStart, dateEnd];
+      if (!dateStart.value || !dateEnd.value || !sbor.value) {
+        dateFields.forEach(f => { f.style.borderColor = ''; f.title = ''; });
+        return;
+      }
+
+      const ds = new Date(dateStart.value);
+      const de = new Date(dateEnd.value);
+
+      if (de < ds) {
+        dateFields.forEach(f => {
+          f.style.borderColor = 'var(--err)';
+          f.title = f === dateStart ? 'Начало не может быть позже окончания' : 'Окончание не может быть раньше начала';
+        });
+        return;
+      }
+
+      const diffDays = Math.floor(Math.abs(de - ds) / (1000 * 60 * 60 * 24)) + 1;
+      const sborType = sbor.value.toLowerCase();
+      const minDays = sborType.includes('сбор') ? 15 : sborType.includes('стажировка') ? 30 : 0;
+      const msg = minDays ? `${sborType.includes('сбор') ? 'Сборы' : 'Стажировка'} должна длиться не менее ${minDays} дней. Текущая длительность: ${diffDays} дней` : '';
+
+      if (minDays && diffDays < minDays) {
+        dateFields.forEach(f => { f.style.borderColor = 'var(--err)'; f.title = msg; });
+      } else {
+        dateFields.forEach(f => { f.style.borderColor = ''; f.title = ''; });
+      }
+    }
+
+    // Обработчики событий для валидации в реальном времени
+    prepods.addEventListener('input', checkLimitsAndHighlight);
+    students.addEventListener('input', checkLimitsAndHighlight);
+    dateStart.addEventListener('change', checkDurationAndHighlight);
+    dateEnd.addEventListener('change', checkDurationAndHighlight);
+    sbor.addEventListener('change', checkDurationAndHighlight);
+
+    // Закрытие всех выпадающих списков автокомплитов при клике вне их
+    document.addEventListener('click', (e) => {
+      document.querySelectorAll('.strict-autocomplete').forEach(container => {
+        if (!container.contains(e.target)) {
+          container.querySelector('.dropdown')?.classList.remove('show');
+        }
+      });
+    });
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', loadDictionaries);
+
+  </script>
+</body>
+
+</html>

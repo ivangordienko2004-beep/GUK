@@ -12,6 +12,7 @@ from .services import create_report, decode_for_admin, merge_excel_files
 
 
 SESSION_KEY = 'merged_file_path'
+UPLOADED_FILES_KEY = 'uploaded_file_names'
 
 
 def _session_path(request) -> Path | None:
@@ -26,11 +27,18 @@ def _session_path(request) -> Path | None:
 
 @login_required
 def dashboard(request):
+    merged_file = _session_path(request)
     context = {
         'form': ExcelUploadForm(),
-        'merged_file': _session_path(request),
+        'merged_file': merged_file,
+        'uploaded_file_names': request.session.get(UPLOADED_FILES_KEY, []),
     }
     return render(request, 'core/dashboard.html', context)
+
+
+@login_required
+def questionnaire(request):
+    return render(request, 'core/questionnaire.html')
 
 
 @login_required
@@ -39,14 +47,25 @@ def upload_files(request):
         return redirect('dashboard')
 
     form = ExcelUploadForm(request.POST, request.FILES)
+    uploaded_files = request.FILES.getlist('files')
+    request.session[UPLOADED_FILES_KEY] = [file.name for file in uploaded_files]
+
     if not form.is_valid():
         for error in form.errors.get('files', []):
             messages.error(request, error)
         return redirect('dashboard')
 
-    merged = merge_excel_files(form.cleaned_data['files'])
+    try:
+        merged = merge_excel_files(form.cleaned_data['files'])
+    except Exception as exc:
+        messages.error(request, f'Не удалось объединить файлы: {exc}')
+        return redirect('dashboard')
+
     request.session[SESSION_KEY] = str(merged)
-    messages.success(request, 'Файлы объединены. Можно скачать, расшифровать и создать отчёт.')
+    messages.success(
+        request,
+        f'Файлы успешно объединены: {", ".join(request.session.get(UPLOADED_FILES_KEY, []))}.'
+    )
     return redirect('dashboard')
 
 
