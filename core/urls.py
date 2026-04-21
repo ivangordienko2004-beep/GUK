@@ -20,6 +20,8 @@ urlpatterns = [
     path('questionnaire/', views.questionnaire, name='questionnaire'),
     path('upload/', views.upload_files, name='upload_files'),
     path('download/merged/', views.download_merged, name='download_merged'),
+    path('editor/', views.excel_editor, name='excel_editor'),
+    path('editor/save/', views.save_excel_editor, name='save_excel_editor'),
     path('decode/', views.decode_vus, name='decode_vus'),
     path('report/', views.create_report, name='create_report'),
 ]
