@@ -558,3 +558,34 @@ def create_report(path: Path) -> Path:
     report_path = path.with_name(f'{path.stem}_report.xlsx')
     wb.save(report_path)
     return report_path
+
+
+def load_editor_payload(path: Path) -> tuple[list[str], list[list[str]]]:
+    df = _read_harmonized_dataframe(path)
+    df = _remove_empty_rows(df)
+
+    column_names = [column_name for _, _, _, column_name in OUTPUT_COLUMNS]
+    column_titles = [title for _, title, _, _ in OUTPUT_COLUMNS]
+
+    if df.empty:
+        return column_titles, []
+
+    rows = df[column_names].fillna('').astype(str).values.tolist()
+    return column_titles, rows
+
+
+def save_editor_rows(path: Path, rows: list[list[str]]) -> None:
+    column_names = [column_name for _, _, _, column_name in OUTPUT_COLUMNS]
+
+    normalized_rows: list[list[str]] = []
+    for row in rows:
+        if not isinstance(row, list):
+            continue
+        clipped = [str(cell) if cell is not None else '' for cell in row[:len(column_names)]]
+        if len(clipped) < len(column_names):
+            clipped.extend([''] * (len(column_names) - len(clipped)))
+        normalized_rows.append(clipped)
+
+    df = pd.DataFrame(normalized_rows, columns=column_names)
+    df = _remove_empty_rows(df)
+    _export_merged_table(df, path)

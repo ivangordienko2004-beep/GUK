@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Редактор Excel | ГУК</title>
+  {% load static %}
+  <link rel="stylesheet" href="{% static 'core/style.css' %}">
+  <style>
+    .editor-wrapper { overflow: auto; max-height: 70vh; border: 1px solid #4d5838; border-radius: 12px; }
+    .excel-table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+    .excel-table th, .excel-table td { border: 1px solid #4d5838; padding: 0; }
+    .excel-table th { position: sticky; top: 0; background: #24301c; z-index: 2; padding: 8px; font-size: 13px; }
+    .excel-cell { width: 100%; min-width: 140px; border: none; background: #1b2316; color: #f4f2de; padding: 8px; }
+    .excel-cell:focus { outline: 2px solid #7a9e33; }
+    .hint { color: #c6cdae; font-size: 12px; margin: 8px 0 14px; }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <section class="card">
+      <div class="header-row">
+        <h1>Онлайн-редактор объединённого Excel</h1>
+        <a href="{% url 'dashboard' %}" class="btn secondary">Назад</a>
+      </div>
+
+      <p class="subtitle">Редактируйте данные сразу в браузере, затем сохраняйте и скачивайте файл.</p>
+      <p class="hint">MVP-режим: редактируются данные строк, без расширенных формул/стилей Excel.</p>
+
+      <div class="actions" style="margin-bottom: 12px;">
+        <button id="add-row" type="button" class="btn">+ Добавить строку</button>
+        <button id="save" type="button" class="btn">Сохранить</button>
+        <a href="{% url 'download_merged' %}" class="btn">Скачать Excel</a>
+      </div>
+
+      <div id="status" class="alert" style="display:none;"></div>
+
+      <div class="editor-wrapper">
+        <table class="excel-table" id="excel-table">
+          <thead>
+            <tr>
+              {% for col in columns %}
+                <th>{{ col }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const columnsCount = {{ columns|length }};
+    const initialRows = {{ rows_json|safe }};
+    const tableBody = document.querySelector('#excel-table tbody');
+    const statusBox = document.getElementById('status');
+
+    function showStatus(message, ok = true) {
+      statusBox.style.display = 'block';
+      statusBox.textContent = message;
+      statusBox.style.borderColor = ok ? '#2e6b43' : '#8d2323';
+    }
+
+    function createCell(value = '') {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.className = 'excel-cell';
+      input.type = 'text';
+      input.value = value ?? '';
+      td.appendChild(input);
+      return td;
+    }
+
+    function addRow(values = []) {
+      const tr = document.createElement('tr');
+      for (let i = 0; i < columnsCount; i += 1) {
+        tr.appendChild(createCell(values[i] || ''));
+      }
+      tableBody.appendChild(tr);
+    }
+
+    function collectRows() {
+      return Array.from(tableBody.querySelectorAll('tr')).map((tr) =>
+        Array.from(tr.querySelectorAll('input')).map((input) => input.value)
+      );
+    }
+
+    initialRows.forEach((row) => addRow(row));
+    if (!initialRows.length) addRow();
+
+    document.getElementById('add-row').addEventListener('click', () => addRow());
+
+    document.getElementById('save').addEventListener('click', async () => {
+      try {
+        const response = await fetch('{% url "save_excel_editor" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}',
+          },
+          body: JSON.stringify({ rows: collectRows() }),
+        });
+
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+          showStatus(payload.error || 'Ошибка при сохранении.', false);
+          return;
+        }
+
+        showStatus('Изменения сохранены. Теперь можно скачивать файл.');
+      } catch (error) {
+        showStatus('Сбой соединения при сохранении.', false);
+      }
+    });
+  </script>
+</body>
+</html>
