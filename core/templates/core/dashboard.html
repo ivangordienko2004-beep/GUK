@@ -55,7 +55,6 @@
         </div>
         <div class="actions">
           <a href="{% url 'download_merged' %}" class="btn">Скачать объединённый Excel</a>
-          <a href="{% url 'excel_editor' %}" class="btn secondary">Открыть редактор</a>
           {% if request.user.is_staff %}
             <a href="{% url 'decode_vus' %}" class="btn">Расшифровка (админ)</a>
           {% endif %}
