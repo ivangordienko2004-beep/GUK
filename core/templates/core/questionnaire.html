@@ -8,11 +8,13 @@
   <title>Опросник ВУС — единый формат ввода</title>
   <style>
     :root {
-      --bg: #0b1220;
-      --card: #121a2b;
-      --muted: #8aa0bf;
-      --text: #e8eefc;
-      --accent: #7cc4ff;
+      --bg: #141712;
+      --card: #2b3323;
+      --muted: #c6cdae;
+      --text: #f4f2de;
+      --accent: #7a9e33;
+      --rf-blue: #1d4f91;
+      --rf-red: #8d2323;
       --ok: #17c964;
       --warn: #f5a524;
       --err: #f31260;
@@ -25,14 +27,14 @@
     body {
       margin: 0;
       font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji", "Segoe UI Emoji";
-      background: linear-gradient(180deg, #0b1220, #0b1220 40%, #0d172a);
+      background: radial-gradient(circle at top, #2c3326 0%, var(--bg) 52%, #0e100d 100%);
       color: var(--text);
     }
 
     header {
       padding: 20px;
-      border-bottom: 1px solid #1f2b43;
-      background: #0c1424;
+      border-bottom: 1px solid #4d5838;
+      background: #1f261a;
       position: sticky;
       top: 0;
       z-index: 5;
@@ -63,7 +65,7 @@
 
     .card {
       background: var(--card);
-      border: 1px solid #1f2b43;
+      border: 1px solid #4d5838;
       border-radius: 16px;
       padding: 16px;
       box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
@@ -93,8 +95,8 @@
       width: 100%;
       padding: 10px 12px;
       border-radius: 10px;
-      border: 1px solid #21304d;
-      background: #0c1526;
+      border: 1px solid #4d5838;
+      background: #1b2316;
       color: var(--text);
       outline: none;
       font-size: 14px;
@@ -155,8 +157,8 @@
     .btn {
       padding: 10px 14px;
       border-radius: 12px;
-      border: 1px solid #1f2b43;
-      background: #0e1a31;
+      border: 1px solid #4d5838;
+      background: #38452b;
       color: var(--text);
       cursor: pointer;
       font-weight: 600;
@@ -167,8 +169,8 @@
     }
 
     .btn-primary {
-      background: linear-gradient(180deg, #1b76ff, #1552d1);
-      border-color: #1a60e6;
+      background: linear-gradient(180deg, #2c66b4, var(--rf-blue));
+      border-color: #244f89;
     }
 
     .btn-ok {
@@ -177,12 +179,12 @@
     }
 
     .btn-warn {
-      background: linear-gradient(180deg, #ff5b5b, #d61f1f);
-      border-color: #c81d1d;
+      background: linear-gradient(180deg, #b44040, var(--rf-red));
+      border-color: #6f1b1b;
     }
 
     .btn-ghost {
-      background: #0c1526;
+      background: #21291b;
     }
 
     .btn-mini {
@@ -203,8 +205,8 @@
       align-items: center;
       padding: 6px 10px;
       border-radius: 999px;
-      border: 1px solid #1f2b43;
-      background: #0e1830;
+      border: 1px solid #4d5838;
+      background: #283221;
       color: var(--muted);
       font-size: 12px;
     }
@@ -219,7 +221,7 @@
     .table-mini th,
     .table-mini td {
       padding: 6px 8px;
-      border-bottom: 1px solid #1f2b43;
+      border-bottom: 1px solid #4d5838;
       text-align: left;
     }
 
@@ -232,7 +234,7 @@
 
     .divider {
       height: 1px;
-      background: #1f2b43;
+      background: #4d5838;
       margin: 12px 0;
     }
 
@@ -409,8 +411,11 @@
     <h1>Опросник для формирования единой таблицы (ВУС)</h1>
     <p>Фиксированный формат ввода + экспорт в Excel по образцу. Поля с <span class="req">*</span> — обязательные.</p>
     <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-      <a href="{% url 'dashboard' %}" style="display:inline-block; padding:10px 14px; border-radius:12px; border:1px solid #1f2b43; background:#0e1a31; color:var(--text); text-decoration:none; font-weight:600;">← На главную</a>
-      <a href="{% url 'logout' %}" style="display:inline-block; padding:10px 14px; border-radius:12px; border:1px solid #1f2b43; background:#3a1620; color:var(--text); text-decoration:none; font-weight:600;">Выйти</a>
+      <a href="{% url 'dashboard' %}" style="display:inline-block; padding:10px 14px; border-radius:12px; border:1px solid #4d5838; background:#2f3f24; color:var(--text); text-decoration:none; font-weight:600;">← На главную</a>
+      <form action="{% url 'logout' %}" method="post" style="margin:0;">
+        {% csrf_token %}
+        <button type="submit" style="display:inline-block; padding:10px 14px; border-radius:12px; border:1px solid #6f1b1b; background:#8d2323; color:var(--text); text-decoration:none; font-weight:600; cursor:pointer;">Выйти</button>
+      </form>
     </div>
   </header>
 
@@ -590,9 +595,9 @@
         <div class="col-12 divider"></div>
 
         <div class="row col-12 actions">
-          <button class="btn btn-ok" id="addRowBtn">Добавить запись в таблицу</button>
-          <button class="btn btn-primary" id="downloadBtn">Скачать Excel</button>
-          <button class="btn btn-ghost" id="resetBtn">Очистить форму</button>
+          <button type="button" class="btn btn-ok" id="addRowBtn">Добавить запись в таблицу</button>
+          <button type="button" class="btn btn-primary" id="downloadBtn">Скачать Excel</button>
+          <button type="button" class="btn btn-ghost" id="resetBtn">Очистить форму</button>
         </div>
 
         <div class="col-12" id="errorBox"></div>
