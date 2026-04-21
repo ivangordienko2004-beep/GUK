@@ -1,31 +1,49 @@
 :root {
-  --bg: #1b1f16;
-  --panel: #2e3722;
+  --bg: #141712;
+  --bg-soft: #1f241a;
+  --panel: #2b3323;
+  --panel-strong: #343e2a;
   --accent: #6b8e23;
   --accent-dark: #4b5320;
-  --danger: #8b4513;
-  --text: #f5f5dc;
+  --rf-blue: #1d4f91;
+  --rf-red: #8d2323;
+  --danger: #8b2f2f;
+  --text: #f4f2de;
+  --muted: #cdd4b5;
 }
 
 body {
   margin: 0;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(130deg, var(--bg), #111);
+  background: radial-gradient(circle at top, #283022 0%, var(--bg) 48%, #0e100d 100%);
   color: var(--text);
+  min-height: 100vh;
 }
 
 .container {
-  max-width: 900px;
+  max-width: 960px;
   margin: 48px auto;
   padding: 0 16px;
 }
 
 .card {
-  background: var(--panel);
-  border: 1px solid var(--accent);
-  border-radius: 12px;
-  padding: 24px;
+  background: linear-gradient(160deg, var(--panel), var(--panel-strong));
+  border: 1px solid rgba(194, 204, 129, 0.35);
+  border-radius: 16px;
+  padding: 26px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 5px;
+  border-radius: 16px 16px 0 0;
+  background: linear-gradient(90deg, #f6f6f6 0 33%, var(--rf-blue) 33% 66%, var(--rf-red) 66% 100%);
 }
 
 .header-row {
@@ -36,7 +54,8 @@ body {
 }
 
 .subtitle {
-  color: #e8e8c8;
+  color: var(--muted);
+  margin-bottom: 16px;
 }
 
 .stack {
@@ -54,29 +73,31 @@ body {
 
 .btn {
   display: inline-block;
-  background: var(--accent);
-  color: white;
+  background: linear-gradient(180deg, #789b2f, var(--accent));
+  color: #fff;
   text-decoration: none;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 10px 16px;
   cursor: pointer;
   font-weight: 600;
+  transition: transform 0.12s ease, filter 0.2s ease;
 }
 
 .btn:hover {
-  background: var(--accent-dark);
+  filter: brightness(1.05);
+  transform: translateY(-1px);
 }
 
 .btn.danger {
-  background: var(--danger);
+  background: linear-gradient(180deg, #ac4040, var(--danger));
 }
 
 .alert {
-  background: rgba(75, 83, 32, 0.9);
-  padding: 8px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--accent);
+  background: rgba(106, 128, 66, 0.28);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(194, 204, 129, 0.4);
   margin-bottom: 8px;
 }
 
@@ -84,18 +105,18 @@ input[type='file'],
 input[type='text'],
 input[type='password'] {
   width: 100%;
-  background: #f8f8ea;
-  border: none;
-  border-radius: 8px;
+  background: #f2f2e2;
+  border: 1px solid rgba(20, 25, 16, 0.25);
+  border-radius: 10px;
   padding: 9px;
   box-sizing: border-box;
 }
 
 
 .btn.secondary {
-  background: #445a1f;
+  background: linear-gradient(180deg, #2960a8, var(--rf-blue));
 }
 
 .btn.secondary:hover {
-  background: #374a18;
+  filter: brightness(1.08);
 }
