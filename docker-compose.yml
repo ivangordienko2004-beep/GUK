@@ -1,0 +1,25 @@
+services:
+  guk:
+    build: .
+    image: guk:astra
+    container_name: guk-astra
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-change-me-in-production}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_STATIC_ROOT: /app/staticfiles
+      DJANGO_MEDIA_ROOT: /app/media
+      GUK_DATABASE_NAME: /app/data/db.sqlite3
+    ports:
+      - "8000:8000"
+    volumes:
+      - guk_data:/app/data
+      - guk_media:/app/media
+      - guk_static:/app/staticfiles
+    restart: unless-stopped
+
+volumes:
+  guk_data:
+  guk_media:
+  guk_static:

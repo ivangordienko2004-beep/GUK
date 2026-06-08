@@ -1,8 +1,10 @@
-@"
 .venv/
+venv/
 __pycache__/
-*.pyc
+*.py[cod]
+*.sqlite3
 db.sqlite3
 media/exports/*.xlsx
 media/exports/*.csv
-"@ | Set-Content .gitignore
+staticfiles/
+.env
